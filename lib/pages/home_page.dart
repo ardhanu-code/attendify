@@ -1,5 +1,6 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/pages/detail_absen_page.dart';
+import 'package:attendify/pages/maps_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -210,10 +211,10 @@ class _HomePageState extends State<HomePage> {
                     style: GoogleFonts.lexend(
                       fontSize: 12,
                       color: Colors.green,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 4),
+                  SizedBox(width: 8),
                   Icon(Icons.arrow_forward_ios, size: 10, color: Colors.green),
                 ],
               ),
@@ -357,7 +358,12 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MapsPage()),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColor.primary,
                 foregroundColor: AppColor.text,

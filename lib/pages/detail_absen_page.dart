@@ -47,128 +47,6 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        CircleAvatar(
-          backgroundColor: AppColor.secondary,
-          radius: 30,
-          child: Icon(Icons.person, color: AppColor.text, size: 30),
-        ),
-        SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sakti Ardhanu',
-                style: GoogleFonts.lexend(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 4),
-              GestureDetector(
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text(
-                        'Today\'s Attendance Data',
-                        style: GoogleFonts.lexend(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      content: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildDetailRow(
-                              label: 'Date:',
-                              value: '2025-07-07',
-                            ),
-                            _buildDetailRow(
-                              label: 'Check In:',
-                              value: '2025-07-07 01:53:24',
-                            ),
-                            _buildDetailRow(
-                              label: 'Check In Address:',
-                              value: 'Jakarta',
-                            ),
-                            _buildDetailRow(
-                              label: 'Check Out:',
-                              value: '2025-07-07 01:53:27',
-                            ),
-                            _buildDetailRow(
-                              label: 'Check Out Address:',
-                              value: 'Jakarta',
-                            ),
-                            _buildDetailRow(label: 'Status:', value: 'present'),
-                            _buildDetailRow(
-                              label: 'Permission Reason:',
-                              value: 'null',
-                            ),
-                          ],
-                        ),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(
-                            'Close',
-                            style: GoogleFonts.lexend(color: Colors.redAccent),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Text(
-                      'Attended',
-                      style: GoogleFonts.lexend(
-                        fontSize: 12,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 10,
-                      color: Colors.green,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Container(
-              //   height: 20,
-              //   width: 74,
-              //   decoration: BoxDecoration(
-              //     borderRadius: BorderRadius.circular(4),
-              //     border: Border.all(color: Colors.green),
-              //   ),
-              //   child: Padding(
-              //     padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              //     child: Text(
-              //       'Attended',
-              //       style: GoogleFonts.lexend(
-              //         color: Colors.green,
-              //         fontSize: 12,
-              //       ),
-              //     ),
-              //   ),
-              // ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSummaryCard() {
     return Container(
       height: 100,
@@ -273,19 +151,37 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
             color: AppColor.tertiary,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
-            children: [
-              Icon(Icons.filter_list, size: 16, color: AppColor.primary),
-              SizedBox(width: 4),
-              Text(
-                'Filter',
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  color: AppColor.primary,
-                  fontWeight: FontWeight.w500,
+          child: SizedBox(
+            height: 18,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                backgroundColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-            ],
+              onPressed: () {
+                // TODO: Implement filter action
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.filter_list, size: 16, color: AppColor.primary),
+                  SizedBox(width: 4),
+                  Text(
+                    'Filter',
+                    style: GoogleFonts.lexend(
+                      fontSize: 12,
+                      color: AppColor.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
