@@ -1,6 +1,7 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:attendify/widgets/detail_row.dart';
 
 class DetailAbsenPage extends StatefulWidget {
   const DetailAbsenPage({super.key});
@@ -222,33 +223,33 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDetailRow(label: 'Name:', value: '1'),
-                          _buildDetailRow(
+                          DetailRow(label: 'Name:', value: '1'),
+                          DetailRow(
                             label: 'Check In:',
                             value: '2025-04-10 07:54:40',
                           ),
-                          _buildDetailRow(
+                          DetailRow(
                             label: 'Check In Location:',
                             value: '-6.2, 106.8',
                           ),
-                          _buildDetailRow(
+                          DetailRow(
                             label: 'Check In Address:',
                             value: 'Jakarta',
                           ),
-                          _buildDetailRow(
+                          DetailRow(
                             label: 'Check Out:',
                             value: '2025-04-10 07:56:51',
                           ),
-                          _buildDetailRow(
+                          DetailRow(
                             label: 'Check Out Location:',
                             value: '-6.2, 106.8',
                           ),
-                          _buildDetailRow(
+                          DetailRow(
                             label: 'Check Out Address:',
                             value: 'Jakarta',
                           ),
-                          _buildDetailRow(label: 'Status:', value: 'masuk'),
-                          _buildDetailRow(label: 'Alasan Izin:', value: 'null'),
+                          DetailRow(label: 'Status:', value: 'masuk'),
+                          DetailRow(label: 'Alasan Izin:', value: 'null'),
                         ],
                       ),
                     ),
@@ -391,54 +392,6 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  // Perbaikan _buildDetailRow:
-  // - Ubah dari positional ke named parameter (label, value, dst)
-  // - Pastikan pemanggilan di atas juga pakai named parameter
-  Widget _buildDetailRow({
-    required String label,
-    required String value,
-    Color? valueColor,
-    FontWeight? valueFontWeight,
-    double? valueFontSize,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            flex: 3,
-            child: Text(
-              label,
-              style: GoogleFonts.lexend(
-                fontSize: 12,
-                color: Colors.black54,
-                fontWeight: FontWeight.w400,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-          SizedBox(width: 12),
-          Flexible(
-            flex: 3,
-            child: Text(
-              value,
-              style: GoogleFonts.lexend(
-                fontSize: valueFontSize ?? 12,
-                color: valueColor ?? Colors.black87,
-                fontWeight: valueFontWeight ?? FontWeight.w600,
-              ),
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ],
       ),
     );
   }

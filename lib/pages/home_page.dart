@@ -1,8 +1,11 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/pages/detail_absen_page.dart';
 import 'package:attendify/pages/maps_page.dart';
+import 'package:attendify/widgets/button.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:attendify/widgets/detail_row.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,7 +37,80 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: AppColor.text,
+              title: Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset(
+                  'assets/icons/attend.png',
+                  width: 80,
+                  height: 80,
+                ),
+              ),
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Attend Now!',
+                    style: GoogleFonts.lexend(
+                      fontSize: 24,
+                      color: AppColor.primary,
+
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'If you ever not check in, tap check in.\nIf you\'re alredy check in tap check out',
+                    style: GoogleFonts.lexend(
+                      fontSize: 12,
+                      color: AppColor.primary,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MapsPage(),
+                              ),
+                            );
+                          },
+                          text: 'Check in',
+                          height: 45,
+                          backgroundColor: AppColor.primary,
+                          borderRadius: BorderRadius.circular(10),
+                          textStyle: GoogleFonts.lexend(color: Colors.blue),
+                        ),
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: CustomButton(
+                          onPressed: () {},
+                          text: 'Check out',
+                          height: 45,
+                          backgroundColor: AppColor.primary,
+                          borderRadius: BorderRadius.circular(10),
+                          textStyle: GoogleFonts.lexend(
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
         tooltip: 'Absen',
         backgroundColor: AppColor.primary,
         child: Icon(Icons.fingerprint, color: AppColor.text, size: 28),
@@ -45,50 +121,82 @@ class _HomePageState extends State<HomePage> {
   Widget _listData() {
     return Expanded(
       child: ListView.builder(
-        itemCount: 10,
+        itemCount: 7, // tampilkan 7 data saja
         itemBuilder: (BuildContext context, int index) {
+          // Generate sample data
+          DateTime date = DateTime.now().subtract(Duration(days: index));
+          String dayName = _getDayName(date.weekday);
+          String dateStr = '${date.day}/${date.month}/${date.year}';
+          bool isLate = index % 7 == 0; // Every 7th day is late
+          bool isWeekend = date.weekday == 6 || date.weekday == 7;
+
+          if (isWeekend) {
+            return SizedBox.shrink(); // Hide weekends
+          }
+
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: Container(
-              height: 80,
+              height: 100,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.black12),
+                color: isLate ? Colors.red.withOpacity(0.05) : null,
               ),
               child: Padding(
-                padding: const EdgeInsets.only(left: 18.0, right: 16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(width: 18),
                     Expanded(
+                      flex: 2,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hari',
+                            dayName,
                             style: GoogleFonts.lexend(
                               fontSize: 12,
                               color: AppColor.primary,
-
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           SizedBox(height: 4),
-
                           Text(
-                            'Tanggal',
+                            dateStr,
                             style: GoogleFonts.lexend(
                               fontSize: 12,
                               color: AppColor.primary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
+                          if (isLate)
+                            Container(
+                              margin: EdgeInsets.only(top: 4),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'LATE',
+                                style: GoogleFonts.lexend(
+                                  fontSize: 8,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                     Expanded(
+                      flex: 2,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -101,18 +209,19 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           SizedBox(height: 4),
-
                           Text(
-                            '00 : 00 : 00',
+                            isLate ? '08:15:30' : '08:00:00',
                             style: GoogleFonts.lexend(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
+                              color: isLate ? Colors.red : Colors.black,
                             ),
                           ),
                         ],
                       ),
                     ),
                     Expanded(
+                      flex: 2,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -126,13 +235,21 @@ class _HomePageState extends State<HomePage> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            '00 : 00 : 00',
+                            '17:00:00',
                             style: GoogleFonts.lexend(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isLate ? Colors.red : Colors.green,
                       ),
                     ),
                   ],
@@ -150,7 +267,7 @@ class _HomePageState extends State<HomePage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Attendance History',
+          'Attendance History (7 Days)',
           style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         TextButton(
@@ -254,16 +371,13 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow(label: 'Date:', value: '2025-07-07'),
-              _buildDetailRow(label: 'Check In:', value: '2025-07-07 01:53:24'),
-              _buildDetailRow(label: 'Check In Address:', value: 'Jakarta'),
-              _buildDetailRow(
-                label: 'Check Out:',
-                value: '2025-07-07 01:53:27',
-              ),
-              _buildDetailRow(label: 'Check Out Address:', value: 'Jakarta'),
-              _buildDetailRow(label: 'Status:', value: 'present'),
-              _buildDetailRow(label: 'Permission Reason:', value: 'null'),
+              DetailRow(label: 'Date:', value: '2025-07-07'),
+              DetailRow(label: 'Check In:', value: '2025-07-07 01:53:24'),
+              DetailRow(label: 'Check In Address:', value: 'Jakarta'),
+              DetailRow(label: 'Check Out:', value: '2025-07-07 01:53:27'),
+              DetailRow(label: 'Check Out Address:', value: 'Jakarta'),
+              DetailRow(label: 'Status:', value: 'present'),
+              DetailRow(label: 'Permission Reason:', value: 'null'),
             ],
           ),
         ),
@@ -273,51 +387,6 @@ class _HomePageState extends State<HomePage> {
             child: Text(
               'Close',
               style: GoogleFonts.lexend(color: Colors.redAccent),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow({
-    required String label,
-    required String value,
-    Color? valueColor,
-    FontWeight? valueFontWeight,
-    double? valueFontSize,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            flex: 3,
-            child: Text(
-              label,
-              style: GoogleFonts.lexend(
-                fontSize: 12,
-                color: Colors.black54,
-                fontWeight: FontWeight.w400,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-          SizedBox(width: 12),
-          Flexible(
-            flex: 3,
-            child: Text(
-              value,
-              style: GoogleFonts.lexend(
-                fontSize: valueFontSize ?? 12,
-                color: valueColor ?? Colors.black87,
-                fontWeight: valueFontWeight ?? FontWeight.w600,
-              ),
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
             ),
           ),
         ],
@@ -488,5 +557,26 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'Monday';
+      case 2:
+        return 'Tuesday';
+      case 3:
+        return 'Wednesday';
+      case 4:
+        return 'Thursday';
+      case 5:
+        return 'Friday';
+      case 6:
+        return 'Saturday';
+      case 7:
+        return 'Sunday';
+      default:
+        return 'Unknown';
+    }
   }
 }
