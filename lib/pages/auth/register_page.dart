@@ -1,6 +1,7 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/models/batches_models.dart';
 import 'package:attendify/models/trainings_model.dart';
+import 'package:attendify/pages/auth/login_page.dart';
 import 'package:attendify/services/auth_services.dart';
 import 'package:attendify/services/get_batches_services.dart';
 import 'package:attendify/services/get_trainings_services.dart';
@@ -97,20 +98,27 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      await registerUser(
+      final result = await registerUser(
         _usernameController.text,
         _emailController.text.trim(),
         _passwordController.text,
         _selectedGender ?? '',
         '',
-        '',
         _selectedBatch!.id,
         _selectedTraining!.id,
       );
+      print(result);
+      Navigator.of(context).pop(); // Close the loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful! Please login.')),
+        const SnackBar(
+          content: Text('Registration successful! Please login.'),
+          backgroundColor: Colors.green,
+        ),
       );
-      Navigator.of(context).pop();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
     } catch (e) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -256,16 +264,31 @@ class _RegisterPageState extends State<RegisterPage> {
     String hintText,
     String? Function(String?)? validator,
   ) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon),
-        hintText: hintText,
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderSide: BorderSide.none),
-        hintStyle: GoogleFonts.lexend(fontSize: 14),
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextFormField(
+        controller: controller,
+        validator: validator,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon),
+          hintText: hintText,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          hintStyle: GoogleFonts.lexend(fontSize: 14),
+        ),
       ),
     );
   }
@@ -277,21 +300,36 @@ class _RegisterPageState extends State<RegisterPage> {
     VoidCallback toggle,
     String? Function(String?)? validator,
   ) {
-    return TextFormField(
-      controller: controller,
-      obscureText: isVisible,
-      validator: validator,
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.lock_outlined),
-        hintText: hintText,
-        suffixIcon: IconButton(
-          icon: Icon(isVisible ? Icons.visibility_off : Icons.visibility),
-          onPressed: toggle,
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isVisible,
+        validator: validator,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.lock_outlined),
+          hintText: hintText,
+          suffixIcon: IconButton(
+            icon: Icon(isVisible ? Icons.visibility_off : Icons.visibility),
+            onPressed: toggle,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          hintStyle: GoogleFonts.lexend(fontSize: 14),
         ),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderSide: BorderSide.none),
-        hintStyle: GoogleFonts.lexend(fontSize: 14),
       ),
     );
   }
@@ -304,25 +342,62 @@ class _RegisterPageState extends State<RegisterPage> {
           'Gender',
           style: GoogleFonts.lexend(fontSize: 14, color: Colors.grey.shade700),
         ),
-        ..._genderOptions.map(
-          (option) => RadioListTile<String>(
-            title: Text(
-              option['label']!,
-              style: GoogleFonts.lexend(fontSize: 14),
-            ),
-            value: option['value'] ?? 'Not Choosen',
-            groupValue: _selectedGender,
-            activeColor: AppColor.primary,
-            onChanged: (val) => setState(() {
-              _selectedGender = val;
-              _genderErrorText = null;
-            }),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.07),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: _genderOptions
+                .map(
+                  (option) => Expanded(
+                    child: Row(
+                      children: [
+                        Radio<String>(
+                          value: option['value'] ?? 'Not Choosen',
+                          groupValue: _selectedGender,
+                          activeColor: AppColor.primary,
+                          onChanged: (val) => setState(() {
+                            _selectedGender = val;
+                            _genderErrorText = null;
+                          }),
+                        ),
+                        if (option['value'] == 'L')
+                          const Icon(Icons.male, color: Colors.blue, size: 20)
+                        else if (option['value'] == 'P')
+                          const Icon(
+                            Icons.female,
+                            color: Colors.pink,
+                            size: 20,
+                          ),
+                        const SizedBox(width: 4),
+                        Text(
+                          option['label']!,
+                          style: GoogleFonts.lexend(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ),
         if (_genderErrorText != null)
-          Text(
-            _genderErrorText!,
-            style: const TextStyle(color: Colors.red, fontSize: 12),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Text(
+              _genderErrorText!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
           ),
       ],
     );

@@ -7,10 +7,18 @@ import 'package:attendify/preferences/preferences.dart';
 import 'package:http/http.dart' as http;
 
 /// Common headers for HTTP requests
-Map<String, String> getHeaders(String token) {
+Map<String, String> getHeader() {
   return <String, String>{
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+  };
+}
+
+Map<String, String> getHeadersLogin(String token) {
+  return <String, String>{
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': 'Bearer $token',
   };
 }
 
@@ -21,13 +29,12 @@ Future<User> registerUser(
   String password,
   String jenisKelamin,
   String profilePhoto,
-  String token,
   int batchId,
   int trainingId,
 ) async {
   final response = await http.post(
     Uri.parse(Endpoint.register),
-    headers: getHeaders(token),
+    headers: getHeader(),
     body: jsonEncode({
       'name': name,
       'email': email,
@@ -41,7 +48,7 @@ Future<User> registerUser(
 
   print(response.body);
 
-  if (response.statusCode == 201) {
+  if (response.statusCode == 200) {
     final registerResponse = RegisterResponse.fromJson(
       json.decode(response.body),
     );
@@ -55,7 +62,7 @@ Future<User> registerUser(
 Future<UserLogin> loginUser(String email, String password, String token) async {
   final response = await http.post(
     Uri.parse(Endpoint.login),
-    headers: getHeaders(token),
+    headers: getHeadersLogin(token),
     body: jsonEncode({'email': email, 'password': password}),
   );
 

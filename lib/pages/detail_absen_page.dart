@@ -1,7 +1,12 @@
 import 'package:attendify/const/app_color.dart';
+import 'package:attendify/models/absen_history_model.dart';
+import 'package:attendify/models/stat_absen_model.dart';
+import 'package:attendify/preferences/preferences.dart';
+import 'package:attendify/services/absen_services.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:attendify/widgets/detail_row.dart';
+import 'package:intl/intl.dart';
 
 class DetailAbsenPage extends StatefulWidget {
   const DetailAbsenPage({super.key});
@@ -11,6 +16,48 @@ class DetailAbsenPage extends StatefulWidget {
 }
 
 class _DetailAbsenPageState extends State<DetailAbsenPage> {
+  List<HistoryAbsenData> listHistoryAbsen = [];
+  StatDataAbsen? statAbsen;
+  bool _isLoading = true;
+
+  Future<void> _getHistoryAbsen() async {
+    setState(() => _isLoading = true);
+    try {
+      String? token = await Preferences.getToken();
+      List<HistoryAbsenData> historyAbsen =
+          await AbsenServices.fetchAbsenHistory(token ?? '');
+      setState(() {
+        listHistoryAbsen = historyAbsen;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _getStatAbsen() async {
+    setState(() => _isLoading = true);
+    try {
+      String? token = await Preferences.getToken();
+      StatAbsenResponse statAbsenData = await AbsenServices.fetchStatAbsen(
+        token ?? '',
+      );
+      setState(() {
+        statAbsen = statAbsenData.data;
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getHistoryAbsen();
+    _getStatAbsen();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -24,23 +71,30 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
         backgroundColor: AppColor.text,
         foregroundColor: AppColor.primary,
         leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: Icon(Icons.arrow_back_ios, size: 18),
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, size: 18),
         ),
         elevation: 0,
       ),
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(22),
+          padding: const EdgeInsets.all(22),
           child: Column(
             children: [
               _buildSummaryCard(),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildFilterSection(),
-              SizedBox(height: 8),
-              _buildAttendanceList(),
+              const SizedBox(height: 8),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await _getHistoryAbsen();
+                    await _getStatAbsen();
+                  },
+                  color: AppColor.primary,
+                  child: _buildAttendanceList(),
+                ),
+              ),
             ],
           ),
         ),
@@ -49,13 +103,15 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
   }
 
   Widget _buildSummaryCard() {
+    int total = statAbsen?.totalAbsen ?? 0;
+    int present = statAbsen?.totalMasuk ?? 0;
+    int permission = statAbsen?.totalIzin ?? 0;
+
     return Container(
       height: 100,
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
           colors: [AppColor.primary, AppColor.primary.withOpacity(0.9)],
         ),
         borderRadius: BorderRadius.circular(10),
@@ -64,76 +120,35 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
         padding: const EdgeInsets.all(18.0),
         child: Row(
           children: [
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Attendance',
-                    style: GoogleFonts.lexend(
-                      fontSize: 12,
-                      color: Colors.white60,
-                    ),
-                  ),
-                  Text(
-                    '22',
-                    style: GoogleFonts.lexend(
-                      fontSize: 20,
-                      color: AppColor.text,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            VerticalDivider(color: Colors.white60, thickness: 1),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Present',
-                    style: GoogleFonts.lexend(
-                      fontSize: 12,
-                      color: Colors.white60,
-                    ),
-                  ),
-                  Text(
-                    '18',
-                    style: GoogleFonts.lexend(
-                      fontSize: 20,
-                      color: AppColor.text,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            VerticalDivider(color: Colors.white60, thickness: 1),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Permission',
-                    style: GoogleFonts.lexend(
-                      fontSize: 12,
-                      color: Colors.white60,
-                    ),
-                  ),
-                  Text(
-                    '4',
-                    style: GoogleFonts.lexend(
-                      fontSize: 20,
-                      color: AppColor.text,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildSummaryItem('Attendance', total),
+            const VerticalDivider(color: Colors.white60, thickness: 1),
+            _buildSummaryItem('Present', present),
+            const VerticalDivider(color: Colors.white60, thickness: 1),
+            _buildSummaryItem('Permission', permission),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String title, int count) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.lexend(fontSize: 12, color: Colors.white60),
+          ),
+          Text(
+            '$count',
+            style: GoogleFonts.lexend(
+              fontSize: 20,
+              color: AppColor.text,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -147,42 +162,26 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
           style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: AppColor.tertiary,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: SizedBox(
-            height: 18,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                backgroundColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () {
-                // TODO: Implement filter action
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.filter_list, size: 16, color: AppColor.primary),
-                  SizedBox(width: 4),
-                  Text(
-                    'Filter',
-                    style: GoogleFonts.lexend(
-                      fontSize: 12,
-                      color: AppColor.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+          child: TextButton.icon(
+            icon: Icon(Icons.filter_list, size: 16, color: AppColor.primary),
+            label: Text(
+              'Filter',
+              style: GoogleFonts.lexend(
+                fontSize: 12,
+                color: AppColor.primary,
+                fontWeight: FontWeight.w500,
               ),
             ),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () {},
           ),
         ),
       ],
@@ -190,230 +189,179 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
   }
 
   Widget _buildAttendanceList() {
-    return Expanded(
-      child: ListView.builder(
-        itemCount: 30,
-        itemBuilder: (BuildContext context, int index) {
-          // Generate sample data
-          DateTime date = DateTime.now().subtract(Duration(days: index));
-          String dayName = _getDayName(date.weekday);
-          String dateStr = '${date.day}/${date.month}/${date.year}';
-          bool isLate = index % 7 == 0; // Every 7th day is late
-          bool isWeekend = date.weekday == 6 || date.weekday == 7;
+    if (_isLoading)
+      return const Center(
+        child: CircularProgressIndicator(color: AppColor.primary),
+      );
 
-          if (isWeekend) {
-            return SizedBox.shrink(); // Hide weekends
-          }
+    if (listHistoryAbsen.isEmpty) {
+      return Center(
+        child: Text(
+          "No attendance records found.",
+          style: GoogleFonts.lexend(color: Colors.black54),
+        ),
+      );
+    }
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: GestureDetector(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text(
-                      'Attendance Detail',
-                      style: GoogleFonts.lexend(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          DetailRow(label: 'Name:', value: '1'),
-                          DetailRow(
-                            label: 'Check In:',
-                            value: '2025-04-10 07:54:40',
-                          ),
-                          DetailRow(
-                            label: 'Check In Location:',
-                            value: '-6.2, 106.8',
-                          ),
-                          DetailRow(
-                            label: 'Check In Address:',
-                            value: 'Jakarta',
-                          ),
-                          DetailRow(
-                            label: 'Check Out:',
-                            value: '2025-04-10 07:56:51',
-                          ),
-                          DetailRow(
-                            label: 'Check Out Location:',
-                            value: '-6.2, 106.8',
-                          ),
-                          DetailRow(
-                            label: 'Check Out Address:',
-                            value: 'Jakarta',
-                          ),
-                          DetailRow(label: 'Status:', value: 'masuk'),
-                          DetailRow(label: 'Alasan Izin:', value: 'null'),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                          'Close',
-                          style: GoogleFonts.lexend(color: Colors.redAccent),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Container(
-                height: 100,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.black12),
-                  color: isLate ? Colors.red.withOpacity(0.05) : null,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      // Date section
-                      SizedBox(width: 18),
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              dayName,
-                              style: GoogleFonts.lexend(
-                                fontSize: 12,
-                                color: AppColor.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              dateStr,
-                              style: GoogleFonts.lexend(
-                                fontSize: 12,
-                                color: AppColor.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (isLate)
-                              Container(
-                                margin: EdgeInsets.only(top: 4),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'LATE',
-                                  style: GoogleFonts.lexend(
-                                    fontSize: 8,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      // Check in section
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Check in',
-                              style: GoogleFonts.lexend(
-                                fontSize: 12,
-                                color: Colors.black45,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              isLate ? '08:15:30' : '08:00:00',
-                              style: GoogleFonts.lexend(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isLate ? Colors.red : Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Check out section
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Check out',
-                              style: GoogleFonts.lexend(
-                                fontSize: 12,
-                                color: Colors.black45,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              '17:00:00',
-                              style: GoogleFonts.lexend(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Status indicator
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isLate ? Colors.red : Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+    return ListView.builder(
+      itemCount: listHistoryAbsen.length,
+      itemBuilder: (context, index) {
+        final absen = listHistoryAbsen[index];
+        final date = absen.checkIn ?? absen.createdAt;
+        final day = date != null ? DateFormat('EEEE').format(date) : '-';
+        final dateStr = date != null
+            ? DateFormat('dd/MM/yyyy').format(date)
+            : '--/--/----';
+        final checkInTime = absen.checkIn != null
+            ? DateFormat('HH:mm:ss').format(absen.checkIn!)
+            : '-- : -- : --';
+        final checkOutTime = absen.checkOut != null
+            ? DateFormat('HH:mm:ss').format(absen.checkOut!)
+            : '-- : -- : --';
+
+        return GestureDetector(
+          onTap: () => _showDetailDialog(absen),
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black12),
+              borderRadius: BorderRadius.circular(10),
             ),
-          );
-        },
-      ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        day,
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(dateStr, style: GoogleFonts.lexend(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Check In",
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                      Text(
+                        checkInTime,
+                        style: GoogleFonts.lexend(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Check Out",
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                      Text(
+                        checkOutTime,
+                        style: GoogleFonts.lexend(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(left: 8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: absen.status == 'masuk'
+                        ? Colors.green
+                        : absen.status == 'izin'
+                        ? Colors.orange
+                        : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  String _getDayName(int weekday) {
-    switch (weekday) {
-      case 1:
-        return 'Monday';
-      case 2:
-        return 'Tuesday';
-      case 3:
-        return 'Wednesday';
-      case 4:
-        return 'Thursday';
-      case 5:
-        return 'Friday';
-      case 6:
-        return 'Saturday';
-      case 7:
-        return 'Sunday';
-      default:
-        return 'Unknown';
-    }
+  void _showDetailDialog(HistoryAbsenData absen) {
+    String formatTime(DateTime? dateTime) =>
+        dateTime != null ? DateFormat('HH:mm:ss').format(dateTime) : '-';
+    String formatDate(DateTime? dateTime) => dateTime != null
+        ? DateFormat('dd/MM/yyyy HH:mm').format(dateTime)
+        : '-';
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          'Attendance Detail',
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              DetailRow(
+                label: 'User ID:',
+                value: absen.userId?.toString() ?? '-',
+              ),
+              DetailRow(label: 'Check In:', value: formatTime(absen.checkIn)),
+              DetailRow(
+                label: 'Check In Location:',
+                value: absen.checkInLocation ?? '-',
+              ),
+              DetailRow(
+                label: 'Check In Address:',
+                value: absen.checkInAddress ?? '-',
+              ),
+              DetailRow(label: 'Check Out:', value: formatTime(absen.checkOut)),
+              DetailRow(
+                label: 'Check Out Location:',
+                value: absen.checkOutLocation ?? '-',
+              ),
+              DetailRow(
+                label: 'Check Out Address:',
+                value: absen.checkOutAddress ?? '-',
+              ),
+              DetailRow(label: 'Status:', value: absen.status ?? '-'),
+              DetailRow(
+                label: 'Alasan Izin:',
+                value: (absen.alasanIzin?.toString().trim().isNotEmpty ?? false)
+                    ? absen.alasanIzin
+                    : '-',
+              ),
+              DetailRow(
+                label: 'Created At:',
+                value: formatDate(absen.createdAt),
+              ),
+              DetailRow(
+                label: 'Updated At:',
+                value: formatDate(absen.updatedAt),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Close',
+              style: GoogleFonts.lexend(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

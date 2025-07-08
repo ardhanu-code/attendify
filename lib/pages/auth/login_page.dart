@@ -1,5 +1,8 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/pages/auth/register_page.dart';
+import 'package:attendify/pages/home_page.dart';
+import 'package:attendify/preferences/preferences.dart';
+import 'package:attendify/services/auth_services.dart';
 import 'package:attendify/widgets/button.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,6 +19,51 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool isVisiblePassword = true;
+
+  Future<void> _handleLogin() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColor.primary),
+      ),
+    );
+
+    try {
+      // Perbaiki get token-nya: ambil token dengan await dan nullable
+      String? token = await Preferences.getToken();
+
+      final result = await loginUser(
+        _emailController.text.trim(),
+        _passwordController.text,
+        token ?? '',
+      );
+      print(result);
+
+      // Save login session
+      await Preferences.saveLoginSession();
+
+      Navigator.of(context).pop(); // Close the loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login successful!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+        (route) => false,
+      );
+    } catch (e) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: ${e.toString()}')));
+    }
+  }
 
   @override
   void dispose() {
@@ -133,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 SizedBox(height: 34),
                 CustomButton(
-                  onPressed: () {},
+                  onPressed: _handleLogin,
                   text: 'LOGIN',
                   textStyle: GoogleFonts.lexend(),
                   backgroundColor: AppColor.primary,
