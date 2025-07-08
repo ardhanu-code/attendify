@@ -28,11 +28,15 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  avatar_glow: ^3.0.1
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
   google_fonts: ^6.2.1
+  http: ^1.4.0
+  image_picker: ^1.1.2
   intl: ^0.20.2
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_lints: ^5.0.0
@@ -51,6 +55,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/logo/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
   # For details regarding adding assets from package dependencies, see

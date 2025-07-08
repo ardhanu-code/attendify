@@ -1,5 +1,4 @@
-import 'package:attendify/pages/auth/get_started.dart';
-import 'package:attendify/pages/home_page.dart';
+import 'package:attendify/pages/auth/login_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -13,7 +12,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: GetStartedPage(),
+      home: LoginPage(),
     );
   }
 }
