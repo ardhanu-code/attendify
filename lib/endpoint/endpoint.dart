@@ -7,7 +7,8 @@ class Endpoint {
   static final String allHistoryAbsen = '$baseUrl/absen/history';
   static final String statAbsen = '$baseUrl/absen/stats';
   static final String profile = '$baseUrl/profile';
+  static final String profilePhoto = '$baseUrl/profile/photo';
   static final String checkIn = '$baseUrl/absen/check-in';
-    static final String checkOut = '$baseUrl/absen/check-out';
+  static final String checkOut = '$baseUrl/absen/check-out';
   static final String todayAbsen = '$baseUrl/absen/today';
 }

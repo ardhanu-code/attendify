@@ -1,10 +1,13 @@
 import 'package:attendify/const/app_color.dart';
+import 'package:attendify/models/edit_profile_model.dart';
 import 'package:attendify/models/profile_model.dart';
 import 'package:attendify/pages/splash_screen.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/profile_services.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -15,6 +18,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   Future<ProfileData>? _futureProfile;
+  Future<EditProfileData>? _editProfile;
+  bool _isUploadingPhoto = false;
 
   @override
   void initState() {
@@ -38,6 +43,60 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _pickAndUploadPhoto(ProfileData profile) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+    final token = await Preferences.getToken();
+    if (token == null) return;
+    setState(() {
+      _isUploadingPhoto = true;
+    });
+    try {
+      final updated = await ProfileServices.uploadProfilePhotoBase64(
+        token: token,
+        photoFile: File(pickedFile.path),
+      );
+      setState(() {
+        _futureProfile = Future.value(
+          ProfileData(
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            batchKe: profile.batchKe,
+            trainingTitle: profile.trainingTitle,
+            batch: profile.batch,
+            training: profile.training,
+            jenisKelamin: profile.jenisKelamin,
+            profilePhoto:
+                updated.profilePhoto, // update photo path from response
+          ),
+        );
+        _isUploadingPhoto = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isUploadingPhoto = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update photo: \\${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,6 +115,94 @@ class _ProfilePageState extends State<ProfilePage> {
           },
           icon: Icon(Icons.arrow_back_ios, size: 16),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: AppColor.primary,
+              size: 20,
+            ),
+            onPressed: () async {
+              final profile = await _futureProfile;
+              String editedName = profile?.name ?? '';
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('Edit Name'),
+                    content: TextFormField(
+                      initialValue: editedName,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        editedName = value;
+                      },
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final token = await Preferences.getToken();
+                          if (token == null) return;
+                          try {
+                            final updated =
+                                await ProfileServices.updateProfileName(
+                                  token: token,
+                                  name: editedName,
+                                );
+                            setState(() {
+                              _futureProfile = Future.value(
+                                ProfileData(
+                                  id: updated.id,
+                                  name: updated.name,
+                                  email: updated.email,
+                                  batchKe: profile!.batchKe,
+                                  trainingTitle: profile.trainingTitle,
+                                  batch: profile.batch,
+                                  training: profile.training,
+                                  jenisKelamin: profile.jenisKelamin,
+                                  profilePhoto: profile.profilePhoto,
+                                ),
+                              );
+                            });
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Profile updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Failed to update profile: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       backgroundColor: AppColor.text,
       body: _futureProfile == null
@@ -86,12 +233,18 @@ class _ProfilePageState extends State<ProfilePage> {
                           CircleAvatar(
                             radius: 48,
                             backgroundColor: AppColor.secondary,
-                            backgroundImage: profile.profilePhoto != null
+                            backgroundImage:
+                                (profile.profilePhoto != null &&
+                                    profile.profilePhoto!.isNotEmpty)
                                 ? NetworkImage(
-                                    'https://your-api-url.com/storage/${profile.profilePhoto}',
+                                    profile.profilePhoto!.startsWith('http')
+                                        ? profile.profilePhoto!
+                                        : 'https://appabsensi.mobileprojp.com/public/${profile.profilePhoto!}',
                                   )
                                 : null,
-                            child: profile.profilePhoto == null
+                            child:
+                                (profile.profilePhoto == null ||
+                                    profile.profilePhoto!.isEmpty)
                                 ? Icon(
                                     Icons.person,
                                     size: 48,
@@ -103,9 +256,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             bottom: 0,
                             right: 0,
                             child: GestureDetector(
-                              onTap: () {
-                                // TODO: Implement upload photo functionality
-                              },
+                              onTap: _isUploadingPhoto
+                                  ? null
+                                  : () => _pickAndUploadPhoto(profile),
                               child: Container(
                                 width: 36,
                                 height: 36,
@@ -117,11 +270,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                     width: 2,
                                   ),
                                 ),
-                                child: const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                                child: _isUploadingPhoto
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.camera_alt,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                               ),
                             ),
                           ),

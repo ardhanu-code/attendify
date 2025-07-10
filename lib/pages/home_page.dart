@@ -493,10 +493,42 @@ class _HomePageState extends State<HomePage> {
 
     return Row(
       children: [
-        CircleAvatar(
-          backgroundColor: AppColor.secondary,
-          radius: 30,
-          child: Icon(Icons.person, color: AppColor.text, size: 30),
+        FutureBuilder(
+          future: _futureProfile,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircleAvatar(
+                backgroundColor: AppColor.secondary,
+                radius: 30,
+                child: Icon(Icons.person, color: AppColor.text, size: 30),
+              );
+            }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return CircleAvatar(
+                backgroundColor: AppColor.secondary,
+                radius: 30,
+                child: Icon(Icons.person, color: AppColor.text, size: 30),
+              );
+            }
+            final profile = snapshot.data;
+            String? photoUrl = profile?.profilePhoto;
+            ImageProvider? imageProvider;
+            if (photoUrl != null && photoUrl.isNotEmpty) {
+              imageProvider = photoUrl.startsWith('http')
+                  ? NetworkImage(photoUrl)
+                  : NetworkImage(
+                      'https://appabsensi.mobileprojp.com/public/$photoUrl',
+                    );
+            }
+            return CircleAvatar(
+              backgroundColor: AppColor.secondary,
+              radius: 30,
+              backgroundImage: imageProvider,
+              child: (imageProvider == null)
+                  ? Icon(Icons.person, color: AppColor.text, size: 30)
+                  : null,
+            );
+          },
         ),
         SizedBox(width: 16),
         FutureBuilder(
