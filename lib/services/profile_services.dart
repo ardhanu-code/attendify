@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:attendify/endpoint/endpoint.dart';
-import 'package:http/http.dart' as http;
-import 'package:attendify/models/profile_model.dart';
 import 'package:attendify/models/edit_profile_model.dart';
 import 'package:attendify/models/edit_profile_photo_model.dart';
+import 'package:attendify/models/profile_model.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileServices {
   static Future<ProfileData> fetchProfile(String token) async {
@@ -13,11 +14,15 @@ class ProfileServices {
       url,
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
+    print('Profile response body: ${response.body}');
     if (response.statusCode == 200) {
       final jsonBody = json.decode(response.body);
-      return ProfileResponse.fromJson(jsonBody).data;
+      print('Parsed JSON: $jsonBody');
+      final profileResponse = ProfileResponse.fromJson(jsonBody);
+      print('Profile data: ${profileResponse.data.name}');
+      return profileResponse.data;
     } else {
-      throw Exception('Failed to load profile');
+      throw Exception('Failed to load profile: ${response.statusCode}');
     }
   }
 

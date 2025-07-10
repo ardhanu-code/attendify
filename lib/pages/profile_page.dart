@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/models/edit_profile_model.dart';
 import 'package:attendify/models/profile_model.dart';
@@ -6,7 +8,6 @@ import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/profile_services.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -320,7 +321,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         leading: Icon(Icons.wc, color: AppColor.primary),
                         title: Text('Gender', style: GoogleFonts.lexend()),
                         subtitle: Text(
-                          profile.jenisKelamin == 'L' ? 'Male' : 'Female',
+                          profile.jenisKelamin == 'L'
+                              ? 'Male'
+                              : profile.jenisKelamin == 'P'
+                              ? 'Female'
+                              : 'Not specified',
                         ),
                       ),
                       const SizedBox(height: 16),

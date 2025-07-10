@@ -1,3 +1,7 @@
+// To parse this JSON data, do
+//
+//     final historyAbsenResponse = historyAbsenResponseFromJson(jsonString);
+
 import 'dart:convert';
 
 HistoryAbsenResponse historyAbsenResponseFromJson(String str) =>
@@ -28,73 +32,92 @@ class HistoryAbsenResponse {
 
 class HistoryAbsenData {
   int id;
-  int? userId;
-  DateTime? checkIn;
-  String? checkInLocation;
+  DateTime attendanceDate;
+  String? checkInTime;
+  dynamic checkOutTime;
+  double? checkInLat;
+  double? checkInLng;
+  dynamic checkOutLat;
+  dynamic checkOutLng;
   String? checkInAddress;
-  DateTime? checkOut;
-  String? checkOutLocation;
-  String? checkOutAddress;
-  String? status;
-  dynamic alasanIzin;
-  DateTime? createdAt;
-  DateTime? updatedAt;
+  dynamic checkOutAddress;
+  String? checkInLocation;
+  dynamic checkOutLocation;
+  Status status;
+  String? alasanIzin;
 
   HistoryAbsenData({
     required this.id,
-    this.userId,
-    this.checkIn,
-    this.checkInLocation,
-    this.checkInAddress,
-    this.checkOut,
-    this.checkOutLocation,
-    this.checkOutAddress,
-    this.status,
-    this.alasanIzin,
-    this.createdAt,
-    this.updatedAt,
+    required this.attendanceDate,
+    required this.checkInTime,
+    required this.checkOutTime,
+    required this.checkInLat,
+    required this.checkInLng,
+    required this.checkOutLat,
+    required this.checkOutLng,
+    required this.checkInAddress,
+    required this.checkOutAddress,
+    required this.checkInLocation,
+    required this.checkOutLocation,
+    required this.status,
+    required this.alasanIzin,
   });
 
   factory HistoryAbsenData.fromJson(Map<String, dynamic> json) =>
       HistoryAbsenData(
-        id: json["id"] is int
-            ? json["id"]
-            : int.tryParse(json["id"].toString()) ?? 0,
-        userId: json["user_id"] is int
-            ? json["user_id"]
-            : int.tryParse(json["user_id"].toString()),
-        checkIn: json["check_in"] != null
-            ? DateTime.tryParse(json["check_in"])
-            : null,
-        checkInLocation: json["check_in_location"],
+        id: json["id"],
+        attendanceDate: DateTime.parse(json["attendance_date"]),
+        checkInTime: json["check_in_time"],
+        checkOutTime: json["check_out_time"],
+        checkInLat: json["check_in_lat"]?.toDouble(),
+        checkInLng: json["check_in_lng"]?.toDouble(),
+        checkOutLat: json["check_out_lat"],
+        checkOutLng: json["check_out_lng"],
         checkInAddress: json["check_in_address"],
-        checkOut: json["check_out"] != null
-            ? DateTime.tryParse(json["check_out"])
-            : null,
-        checkOutLocation: json["check_out_location"],
         checkOutAddress: json["check_out_address"],
-        status: json["status"],
+        checkInLocation: json["check_in_location"],
+        checkOutLocation: json["check_out_location"],
+        status:
+            statusValues.map[json["status"]] ??
+            Status.MASUK, // default ke MASUK jika tidak ditemukan
         alasanIzin: json["alasan_izin"],
-        createdAt: json["created_at"] != null
-            ? DateTime.tryParse(json["created_at"])
-            : null,
-        updatedAt: json["updated_at"] != null
-            ? DateTime.tryParse(json["updated_at"])
-            : null,
       );
 
   Map<String, dynamic> toJson() => {
     "id": id,
-    "user_id": userId,
-    "check_in": checkIn?.toIso8601String(),
-    "check_in_location": checkInLocation,
+    "attendance_date":
+        "${attendanceDate.year.toString().padLeft(4, '0')}-${attendanceDate.month.toString().padLeft(2, '0')}-${attendanceDate.day.toString().padLeft(2, '0')}",
+    "check_in_time": checkInTime,
+    "check_out_time": checkOutTime,
+    "check_in_lat": checkInLat,
+    "check_in_lng": checkInLng,
+    "check_out_lat": checkOutLat,
+    "check_out_lng": checkOutLng,
     "check_in_address": checkInAddress,
-    "check_out": checkOut?.toIso8601String(),
-    "check_out_location": checkOutLocation,
     "check_out_address": checkOutAddress,
-    "status": status,
+    "check_in_location": checkInLocation,
+    "check_out_location": checkOutLocation,
+    "status": statusValues.reverse[status],
     "alasan_izin": alasanIzin,
-    "created_at": createdAt?.toIso8601String(),
-    "updated_at": updatedAt?.toIso8601String(),
   };
+}
+
+enum Status { IZIN, MASUK }
+
+final statusValues = EnumValues({
+  "izin": Status.IZIN,
+  "masuk": Status.MASUK,
+  "permission": Status.IZIN, // tambahan untuk kompatibilitas
+});
+
+class EnumValues<T> {
+  Map<String, T> map;
+  late Map<T, String> reverseMap;
+
+  EnumValues(this.map);
+
+  Map<T, String> get reverse {
+    reverseMap = map.map((k, v) => MapEntry(v, k));
+    return reverseMap;
+  }
 }

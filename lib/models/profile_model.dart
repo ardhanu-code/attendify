@@ -19,7 +19,7 @@ class ProfileData {
   final String trainingTitle;
   final Batch batch;
   final Training training;
-  final String jenisKelamin;
+  final String? jenisKelamin;
   final String? profilePhoto;
 
   ProfileData({
@@ -30,7 +30,7 @@ class ProfileData {
     required this.trainingTitle,
     required this.batch,
     required this.training,
-    required this.jenisKelamin,
+    this.jenisKelamin,
     this.profilePhoto,
   });
 

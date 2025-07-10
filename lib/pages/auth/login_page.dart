@@ -1,6 +1,6 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/pages/auth/register_page.dart';
-import 'package:attendify/pages/home_page.dart';
+import 'package:attendify/pages/home/home_page.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/auth_services.dart';
 import 'package:attendify/widgets/button.dart';

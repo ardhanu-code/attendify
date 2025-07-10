@@ -3,11 +3,6 @@ import 'package:attendify/models/absen_history_model.dart';
 import 'package:attendify/models/profile_model.dart';
 import 'package:attendify/models/today_absen_model.dart';
 import 'package:attendify/pages/detail_absen_page.dart';
-import 'package:attendify/pages/home/widgets/container_check_in_out_widget.dart';
-import 'package:attendify/pages/home/widgets/container_distance.dart';
-import 'package:attendify/pages/home/widgets/header_widget.dart';
-import 'package:attendify/pages/home/widgets/list_data_widget.dart';
-import 'package:attendify/pages/home/widgets/section_riwayat_details_widget.dart';
 import 'package:attendify/pages/maps_page.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/absen_services.dart';
@@ -15,6 +10,11 @@ import 'package:attendify/services/maps_services.dart';
 import 'package:attendify/services/profile_services.dart';
 import 'package:attendify/widgets/button.dart';
 import 'package:attendify/widgets/detail_row.dart';
+import 'package:attendify/pages/home/widgets/container_check_in_out_widget.dart';
+import 'package:attendify/pages/home/widgets/container_distance.dart';
+import 'package:attendify/pages/home/widgets/header_widget.dart';
+import 'package:attendify/pages/home/widgets/list_data_widget.dart';
+import 'package:attendify/pages/home/widgets/section_riwayat_details_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -51,7 +51,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _refreshData();
+    _initTokenAndFetchHistory();
+    _futureProfile = _loadProfile();
+    _fetchLocationData();
+    _fetchTodayAttendanceData();
   }
 
   Future<void> _fetchTodayAttendanceData() async {
@@ -143,11 +146,6 @@ class _HomePageState extends State<HomePage> {
       await _futureAbsenHistory;
       await _fetchLocationData();
       await _fetchTodayAttendanceData();
-      _initTokenAndFetchHistory();
-      _futureProfile = _loadProfile();
-      _fetchLocationData();
-      _fetchTodayAttendanceData();
-      print("Data direfresh setelah check in berhasil.");
     } else {
       await _initTokenAndFetchHistory();
       await _fetchLocationData();
@@ -241,7 +239,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Text(
-              'If you have not checked in, tap check in.\nIf already checked in, tap check out.',
+              'If you ever not check in, tap check in.\nIf you\'re already checked in tap check out',
               style: GoogleFonts.lexend(
                 fontSize: 12,
                 color: AppColor.primary,
@@ -253,18 +251,14 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Expanded(
                   child: CustomButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop(); // Tutup dialog dulu
-                      final result = await Navigator.push<bool>(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => MapsPage()),
                       );
-                      print("Result dari MapsPage: $result");
-                      if (result == true) {
-                        _refreshData(); // Jalankan refresh jika berhasil check in
-                      }
                     },
-                    text: 'Check In',
+                    text: 'Check in',
                     height: 45,
                     backgroundColor: AppColor.primary,
                     borderRadius: BorderRadius.circular(10),
@@ -280,7 +274,7 @@ class _HomePageState extends State<HomePage> {
                             Navigator.of(context).pop();
                             _showDialogCheckOut(context);
                           },
-                    text: _isCheckingOut ? 'Checking out...' : 'Check Out',
+                    text: _isCheckingOut ? 'Checking out...' : 'Check out',
                     height: 45,
                     backgroundColor: AppColor.primary,
                     borderRadius: BorderRadius.circular(10),

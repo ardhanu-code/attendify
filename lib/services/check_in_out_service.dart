@@ -15,6 +15,7 @@ class CheckInService {
     required double lng,
     required String address,
     required String status,
+    required DateTime attendanceDate,
     String? alasanIzin,
   }) async {
     final url = Uri.parse(Endpoint.checkIn);
@@ -23,24 +24,49 @@ class CheckInService {
       'Accept': 'application/json',
       'Authorization': 'Bearer $token',
     };
+
+    // Format date sesuai model (yyyy-MM-dd)
+    final String formattedDate =
+        "${attendanceDate.year.toString().padLeft(4, '0')}-${attendanceDate.month.toString().padLeft(2, '0')}-${attendanceDate.day.toString().padLeft(2, '0')}";
+
+    // Format jam dan menit saja
+    final String checkInTime =
+        "${attendanceDate.hour.toString().padLeft(2, '0')}:${attendanceDate.minute.toString().padLeft(2, '0')}";
+
+    // Format lokasi string
+    final String locationString = "${lat.toString()},${lng.toString()}";
+
     final body = <String, dynamic>{
+      'attendance_date': formattedDate,
+      'check_in': checkInTime,
       'check_in_lat': lat.toString(),
       'check_in_lng': lng.toString(),
+      'check_in_location': locationString,
       'check_in_address': address,
-      'status': status,
     };
-    if (alasanIzin != null && alasanIzin.isNotEmpty) {
+
+    // Tambahkan alasan_izin hanya jika ada dan status adalah izin
+    if (alasanIzin != null &&
+        alasanIzin.isNotEmpty &&
+        status.toLowerCase() == 'izin') {
       body['alasan_izin'] = alasanIzin;
     }
+
+    print('Check-in request body: ${jsonEncode(body)}');
+    print('Check-in URL: $url');
+    print('Check-in headers: $headers');
+
     final response = await http.post(
       url,
       headers: headers,
       body: jsonEncode(body),
     );
+    print('Check-in response status: ${response.statusCode}');
+    print('Check-in response body: ${response.body}');
+
     if (response.statusCode == 200 || response.statusCode == 201) {
       return checkInResponseFromJson(response.body);
     } else {
-      // Coba parsing error message dari response
       String message = 'Gagal check in';
       try {
         final data = jsonDecode(response.body);
@@ -48,7 +74,7 @@ class CheckInService {
           message = data['message'];
         }
       } catch (_) {}
-      throw Exception(message);
+      throw Exception('$message (Status: ${response.statusCode})');
     }
   }
 
@@ -61,24 +87,58 @@ class CheckInService {
     required double lng,
     required String address,
   }) async {
-    final url = Uri.parse(Endpoint.baseUrl + '/absen/checkout');
+    final url = Uri.parse(Endpoint.checkOut);
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Authorization': 'Bearer $token',
     };
+
+    // Format current time for check out
+    final now = DateTime.now();
+    final checkOutTime =
+        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+    // Format attendance date (YYYY-MM-DD)
+    final attendanceDate =
+        "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
     final body = <String, dynamic>{
+      'attendance_date': attendanceDate,
+      'check_out': checkOutTime,
       'check_out_lat': lat.toString(),
       'check_out_lng': lng.toString(),
+      'check_out_location': "${lat.toString()},${lng.toString()}",
       'check_out_address': address,
     };
+
+    print('DEBUG: Check-out request body: ${jsonEncode(body)}');
+    print('DEBUG: Check-out URL: $url');
+    print('DEBUG: Check-out headers: $headers');
+    print('DEBUG: Attendance date: $attendanceDate');
+    print('DEBUG: Check-out time: $checkOutTime');
+
     final response = await http.post(
       url,
       headers: headers,
       body: jsonEncode(body),
     );
+
+    print('DEBUG: Check-out response status: ${response.statusCode}');
+    print('DEBUG: Check-out response body: ${response.body}');
+
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return checkOutResponseFromJson(response.body);
+      try {
+        final checkOutResponse = checkOutResponseFromJson(response.body);
+        print('DEBUG: Parsed check-out response successfully');
+        print('DEBUG: Message: ${checkOutResponse.message}');
+        print('DEBUG: Data ID: ${checkOutResponse.data.id}');
+        print('DEBUG: Check-out time: ${checkOutResponse.data.checkOutTime}');
+        return checkOutResponse;
+      } catch (e) {
+        print('DEBUG: Error parsing check-out response: $e');
+        throw Exception('Error parsing response: $e');
+      }
     } else {
       String message = 'Gagal check out';
       try {
@@ -87,7 +147,7 @@ class CheckInService {
           message = data['message'];
         }
       } catch (_) {}
-      throw Exception(message);
+      throw Exception('$message (Status: ${response.statusCode})');
     }
   }
 

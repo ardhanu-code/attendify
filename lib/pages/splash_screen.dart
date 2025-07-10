@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:attendify/pages/home_page.dart';
+import 'package:attendify/pages/home/home_page.dart';
 import 'package:attendify/pages/auth/login_page.dart';
 import 'package:attendify/preferences/preferences.dart';
 

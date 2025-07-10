@@ -10,5 +10,5 @@ class Endpoint {
   static final String profilePhoto = '$baseUrl/profile/photo';
   static final String checkIn = '$baseUrl/absen/check-in';
   static final String checkOut = '$baseUrl/absen/check-out';
-  static final String todayAbsen = '$baseUrl/absen/today';
+  static String todayAbsen(String attendanceDate) => '$baseUrl/absen/today?attendance_date=$attendanceDate';
 }

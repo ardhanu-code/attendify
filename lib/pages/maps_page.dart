@@ -1,8 +1,8 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/models/today_absen_model.dart';
 import 'package:attendify/preferences/preferences.dart';
-import 'package:attendify/services/absen_services.dart'; // Tambahkan import absen_services.dart
-import 'package:attendify/services/check_in_service.dart';
+import 'package:attendify/services/absen_services.dart';
+import 'package:attendify/services/check_in_out_service.dart';
 import 'package:attendify/services/maps_services.dart';
 import 'package:attendify/widgets/button.dart';
 import 'package:flutter/material.dart';
@@ -46,13 +46,11 @@ class _MapsPageState extends State<MapsPage> {
         });
         return;
       }
-      // Asumsikan CheckInService.hasCheckedInToday mengembalikan bool
       final checkedIn = await CheckInService.hasCheckedInToday(token: token);
       setState(() {
         _hasCheckedIn = checkedIn;
       });
     } catch (e) {
-      // Jika error, anggap belum check in (atau bisa tampilkan error)
       setState(() {
         _hasCheckedIn = false;
       });
@@ -80,10 +78,9 @@ class _MapsPageState extends State<MapsPage> {
       await _getAddressFromLatLng(position);
     } catch (e) {
       String errorMsg = "Terjadi kesalahan saat mengambil lokasi: $e";
-      // Tangani MissingPluginException secara khusus
       if (e.toString().contains('MissingPluginException')) {
         errorMsg =
-            "Aplikasi tidak dapat mengakses layanan lokasi. Pastikan aplikasi dijalankan di perangkat fisik atau emulator dengan plugin yang benar, dan sudah melakukan 'flutter clean' serta restart aplikasi. (MissingPluginException)";
+            "Aplikasi tidak dapat mengakses layanan lokasi. Pastikan aplikasi dijalankan di perangkat fisik atau emulator dengan plugin yang benar.";
       }
       setState(() {
         _loading = false;
@@ -120,6 +117,13 @@ class _MapsPageState extends State<MapsPage> {
       setState(() {
         _todayAbsenResponse = todayAbsenResponse;
       });
+      // Cek status check-in berdasarkan data absen hari ini
+      if (todayAbsenResponse.data != null &&
+          todayAbsenResponse.data!.checkIn.isNotEmpty) {
+        setState(() {
+          _hasCheckedIn = true;
+        });
+      }
     } catch (e) {
       setState(() {
         _todayAbsenResponse = null;
@@ -128,44 +132,101 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   Future<void> _handleCheckIn() async {
-    if (_currentPosition == null || _currentAddress == null) {
+    // Validasi lokasi
+    if (_currentPosition == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lokasi belum tersedia. Coba refresh lokasi.')),
       );
       return;
     }
+
+    // Validasi alamat
+    if (_currentAddress == null || _currentAddress!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Alamat belum tersedia. Coba refresh lokasi.')),
+      );
+      return;
+    }
+
+    // Validasi koordinat
+    if (_currentPosition!.latitude == 0.0 &&
+        _currentPosition!.longitude == 0.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Koordinat lokasi tidak valid. Coba refresh lokasi.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isCheckingIn = true;
     });
+
     try {
       final token = await Preferences.getToken();
       if (token == null || token.isEmpty) {
         throw Exception('Token tidak ditemukan, silakan login ulang.');
       }
-      final response = await CheckInService.checkIn(
-        token: token,
-        lat: _currentPosition!.latitude,
-        lng: _currentPosition!.longitude,
-        address: _currentAddress!,
-        status: 'masuk',
-      );
-      setState(() {
-        _hasCheckedIn = true;
-      });
-      await _fetchTodayAttendanceData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Check In Berhasil: ${response.message}'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Check In Gagal: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+
+      print('DEBUG: Starting check-in with:');
+      print('  - Latitude: ${_currentPosition!.latitude}');
+      print('  - Longitude: ${_currentPosition!.longitude}');
+      print('  - Address: $_currentAddress');
+      print('  - Status: masuk');
+
+      try {
+        final response = await CheckInService.checkIn(
+          token: token,
+          lat: _currentPosition!.latitude,
+          lng: _currentPosition!.longitude,
+          address: _currentAddress!,
+          status: 'masuk',
+          attendanceDate: DateTime.now(),
+        );
+
+        setState(() {
+          _hasCheckedIn = true;
+        });
+        await _fetchTodayAttendanceData();
+
+        // Setelah check in berhasil, pastikan status berubah menjadi sudah check in
+        setState(() {
+          _hasCheckedIn = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Check In Berhasil: ${response.message ?? 'Success'}',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      } on Exception catch (e) {
+        // Cek jika exception mengandung status 409
+        final msg = e.toString();
+        if (msg.contains('409')) {
+          setState(() {
+            _hasCheckedIn = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Anda sudah melakukan absen hari ini'),
+              backgroundColor: Colors.yellow[800],
+            ),
+          );
+        } else {
+          print('DEBUG: Check-in error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Check In Gagal: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } finally {
       setState(() {
         _isCheckingIn = false;
@@ -173,11 +234,25 @@ class _MapsPageState extends State<MapsPage> {
     }
   }
 
-  // Tambahkan _handleCheckOut dari home_page.dart dan gunakan API dari absen_services.dart
   Future<void> _handleCheckOut() async {
     if (_currentPosition == null || _currentAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lokasi belum tersedia. Coba refresh lokasi.')),
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.location_off, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Lokasi belum tersedia. Coba refresh lokasi.',
+                  style: GoogleFonts.lexend(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -189,28 +264,70 @@ class _MapsPageState extends State<MapsPage> {
       if (token == null || token.isEmpty) {
         throw Exception('Token tidak ditemukan, silakan login ulang.');
       }
-      // Gunakan AbsenServices.checkOut sesuai instruksi
+
+      print('DEBUG: Starting check-out with:');
+      print('  - Latitude: ${_currentPosition!.latitude}');
+      print('  - Longitude: ${_currentPosition!.longitude}');
+      print('  - Address: $_currentAddress');
+
       final response = await AbsenServices.checkOut(
         token: token,
         lat: _currentPosition!.latitude,
         lng: _currentPosition!.longitude,
         address: _currentAddress!,
       );
+
+      print(
+        'DEBUG: Check-out time from response: ${response.data.checkOutTime}',
+      );
+
       setState(() {
         _hasCheckedIn = false;
       });
       await _fetchTodayAttendanceData();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Check Out Berhasil: ${response.message}'),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Check Out Berhasil! Waktu: ${response.data.checkOutTime}',
+                  style: GoogleFonts.lexend(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
     } catch (e) {
+      print('DEBUG: Check-out error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Check Out Gagal: ${e.toString()}'),
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Check Out Gagal: ${e.toString()}',
+                  style: GoogleFonts.lexend(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
     } finally {
@@ -222,6 +339,14 @@ class _MapsPageState extends State<MapsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Cek status check-in berdasarkan data absen hari ini
+    bool isCheckedIn = _hasCheckedIn;
+    if (_todayAbsenResponse != null &&
+        _todayAbsenResponse!.data != null &&
+        _todayAbsenResponse!.data!.checkIn.isNotEmpty) {
+      isCheckedIn = true;
+    }
+
     return Scaffold(
       backgroundColor: AppColor.text,
       appBar: AppBar(
@@ -229,7 +354,7 @@ class _MapsPageState extends State<MapsPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios, color: AppColor.primary, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, false),
         ),
         centerTitle: true,
         title: Text(
@@ -249,35 +374,75 @@ class _MapsPageState extends State<MapsPage> {
               children: [
                 // Map Section
                 Container(
-                  height: 400, // Tinggikan maps agar lebih memanjang ke bawah
+                  height: 400,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _loading
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(
-                                color: AppColor.primary,
+                  child: Stack(
+                    children: [
+                      // Map content
+                      _loading
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(
+                                    color: AppColor.primary,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _errorMessage == null
+                                        ? "Mengambil lokasi..."
+                                        : _errorMessage!,
+                                    style: GoogleFonts.lexend(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_errorMessage != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColor.primary,
+                                          foregroundColor: AppColor.text,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        onPressed: _getCurrentLocation,
+                                        icon: Icon(Icons.refresh),
+                                        label: Text("Coba Lagi"),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _errorMessage == null
-                                    ? "Mengambil lokasi..."
-                                    : _errorMessage!,
-                                style: GoogleFonts.lexend(
-                                  fontSize: 13,
-                                  color: Colors.black54,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              if (_errorMessage != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: ElevatedButton.icon(
+                            )
+                          : (_currentPosition == null)
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.location_off,
+                                    color: Colors.red,
+                                    size: 40,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Lokasi tidak tersedia",
+                                    style: GoogleFonts.lexend(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton.icon(
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColor.primary,
                                       foregroundColor: AppColor.text,
@@ -287,89 +452,49 @@ class _MapsPageState extends State<MapsPage> {
                                     ),
                                     onPressed: _getCurrentLocation,
                                     icon: Icon(Icons.refresh),
-                                    label: Text("Coba Lagi"),
+                                    label: Text("Refresh Lokasi"),
                                   ),
-                                ),
-                            ],
-                          ),
-                        )
-                      : (_currentPosition == null)
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.location_off,
-                                color: Colors.red,
-                                size: 40,
+                                ],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _errorMessage ?? 'Lokasi tidak tersedia',
-                                style: GoogleFonts.lexend(
-                                  fontSize: 13,
-                                  color: Colors.black54,
+                            )
+                          : GoogleMap(
+                              onMapCreated: _onMapCreated,
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(
+                                  _currentPosition!.latitude,
+                                  _currentPosition!.longitude,
                                 ),
-                                textAlign: TextAlign.center,
+                                zoom: 15.0,
                               ),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColor.primary,
-                                  foregroundColor: AppColor.text,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: _getCurrentLocation,
-                                icon: Icon(Icons.refresh),
-                                label: Text("Coba Lagi"),
-                              ),
-                            ],
-                          ),
-                        )
-                      : Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: GoogleMap(
-                                onMapCreated: _onMapCreated,
-                                initialCameraPosition: CameraPosition(
-                                  target: LatLng(
+                              markers: {
+                                Marker(
+                                  markerId: MarkerId('current_location'),
+                                  position: LatLng(
                                     _currentPosition!.latitude,
                                     _currentPosition!.longitude,
                                   ),
-                                  zoom: 16,
-                                ),
-                                markers: {
-                                  Marker(
-                                    markerId: MarkerId('currentLocation'),
-                                    position: LatLng(
-                                      _currentPosition!.latitude,
-                                      _currentPosition!.longitude,
-                                    ),
-                                    infoWindow: InfoWindow(
-                                      title: 'Lokasi Anda',
-                                    ),
+                                  infoWindow: InfoWindow(
+                                    title: 'Lokasi Anda',
+                                    snippet:
+                                        _currentAddress ??
+                                        'Alamat tidak tersedia',
                                   ),
-                                },
-                                myLocationEnabled: true,
-                                myLocationButtonEnabled: false,
-                              ),
-                            ),
-                            Positioned(
-                              left: 8,
-                              bottom: 35,
-                              child: FloatingActionButton(
-                                backgroundColor: Colors.blueAccent,
-                                onPressed: _getCurrentLocation,
-                                child: Icon(
-                                  Icons.my_location,
-                                  color: AppColor.text,
                                 ),
-                              ),
+                              },
                             ),
-                          ],
+                      // Refresh button overlay
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: FloatingActionButton.small(
+                          onPressed: _getCurrentLocation,
+                          backgroundColor: AppColor.primary,
+                          foregroundColor: AppColor.text,
+                          child: Icon(Icons.refresh),
                         ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
                 // Status & Address
@@ -387,11 +512,11 @@ class _MapsPageState extends State<MapsPage> {
                           ),
                         ),
                         Text(
-                          _hasCheckedIn ? 'Sudah Check In' : 'Belum Check In',
+                          isCheckedIn ? 'Sudah Check In' : 'Belum Check In',
                           style: GoogleFonts.lexend(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: _hasCheckedIn ? Colors.green : Colors.red,
+                            color: isCheckedIn ? Colors.green : Colors.red,
                           ),
                         ),
                       ],
@@ -446,8 +571,6 @@ class _MapsPageState extends State<MapsPage> {
                       const SizedBox(height: 8),
                       Builder(
                         builder: (context) {
-                          // Ambil data hari ini dari backend jika sudah check in
-                          // Perbaikan: gunakan data check in/out dari backend jika tersedia
                           final now = DateTime.now();
                           final days = [
                             'Sunday',
@@ -476,13 +599,9 @@ class _MapsPageState extends State<MapsPage> {
                           String dateStr =
                               "${now.day.toString().padLeft(2, '0')}-${monthName}-${now.year}";
 
-                          // Ambil data check in/out dari backend jika ada
                           String checkInTime = '-';
                           String checkOutTime = '-';
 
-                          // Cek apakah ada response absen hari ini
-                          // Pastikan _todayAbsenResponse dan _todayAbsenResponse.data sudah diambil dari backend
-                          // dan diupdate setiap kali check in/out berhasil
                           final todayData =
                               (_todayAbsenResponse != null &&
                                   _todayAbsenResponse!.data != null)
@@ -490,7 +609,6 @@ class _MapsPageState extends State<MapsPage> {
                               : null;
 
                           if (todayData != null) {
-                            // Format waktu check in
                             if (todayData.checkIn.isNotEmpty) {
                               try {
                                 final dt = DateTime.parse(todayData.checkIn);
@@ -500,7 +618,6 @@ class _MapsPageState extends State<MapsPage> {
                                 checkInTime = todayData.checkIn;
                               }
                             }
-                            // Format waktu check out jika sudah ada
                             if (todayData.checkOut != null &&
                                 todayData.checkOut!.isNotEmpty) {
                               try {
@@ -594,62 +711,15 @@ class _MapsPageState extends State<MapsPage> {
                   ),
                 ),
                 SizedBox(height: 16),
-                // Tempat untuk foto (placeholder)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: GestureDetector(
-                    //onTap:
-                    child: Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        border: Border.all(color: Colors.grey[400]!, width: 1),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.camera_alt,
-                              size: 48,
-                              color: Colors.grey[500],
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Tap for insert image',
-                              style: GoogleFonts.lexend(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 12),
-                // CustomButton(
-                //   onPressed: () {},
-                //   text: 'Take Photo',
-                //   minWidth: double.infinity,
-                //   height: 45,
-                //   backgroundColor: AppColor.secondary,
-                //   foregroundColor: AppColor.text,
-                //   borderRadius: BorderRadius.circular(10),
-                // ),
-                SizedBox(height: 12),
                 CustomButton(
                   onPressed: _isCheckingIn || _isCheckingOut
                       ? null
-                      : (_hasCheckedIn ? _handleCheckOut : _handleCheckIn),
+                      : (isCheckedIn ? _handleCheckOut : _handleCheckIn),
                   text: _isCheckingIn
                       ? ''
                       : (_isCheckingOut
                             ? ''
-                            : (_hasCheckedIn ? 'Check Out' : 'Check In')),
+                            : (isCheckedIn ? 'Check Out' : 'Check In')),
                   minWidth: double.infinity,
                   height: 45,
                   backgroundColor: AppColor.primary,

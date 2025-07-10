@@ -11,10 +11,10 @@ String todayAbsenResponseToJson(TodayAbsenResponse data) =>
     json.encode(data.toJson());
 
 class TodayAbsenResponse {
-  String message;
+  String? message;
   TodayAbsenData? data;
 
-  TodayAbsenResponse({required this.message, this.data});
+  TodayAbsenResponse({this.message, this.data});
 
   factory TodayAbsenResponse.fromJson(Map<String, dynamic> json) =>
       TodayAbsenResponse(
@@ -28,45 +28,52 @@ class TodayAbsenResponse {
 }
 
 class TodayAbsenData {
-  String tanggal;
-  String? jamMasuk;
-  String? jamKeluar;
-  String? alamatMasuk;
-  String? alamatKeluar;
+  String? attendanceDate;
+  String? checkInTime;
+  String? checkOutTime;
+  String? checkInAddress;
+  String? checkOutAddress;
   String? status;
   String? alasanIzin;
 
   TodayAbsenData({
-    required this.tanggal,
-    this.jamMasuk,
-    this.jamKeluar,
-    this.alamatMasuk,
-    this.alamatKeluar,
+    this.attendanceDate,
+    this.checkInTime,
+    this.checkOutTime,
+    this.checkInAddress,
+    this.checkOutAddress,
     this.status,
     this.alasanIzin,
   });
 
   factory TodayAbsenData.fromJson(Map<String, dynamic> json) => TodayAbsenData(
-    tanggal: json["tanggal"],
-    jamMasuk: json["jam_masuk"],
-    jamKeluar: json["jam_keluar"],
-    alamatMasuk: json["alamat_masuk"],
-    alamatKeluar: json["alamat_keluar"],
+    attendanceDate: json["attendance_date"],
+    checkInTime: json["check_in_time"],
+    checkOutTime: json["check_out_time"],
+    checkInAddress: json["check_in_address"],
+    checkOutAddress: json["check_out_address"],
     status: json["status"],
     alasanIzin: json["alasan_izin"],
   );
 
   Map<String, dynamic> toJson() => {
-    "tanggal": tanggal,
-    "jam_masuk": jamMasuk,
-    "jam_keluar": jamKeluar,
-    "alamat_masuk": alamatMasuk,
-    "alamat_keluar": alamatKeluar,
+    "attendance_date": attendanceDate,
+    "check_in_time": checkInTime,
+    "check_out_time": checkOutTime,
+    "check_in_address": checkInAddress,
+    "check_out_address": checkOutAddress,
     "status": status,
     "alasan_izin": alasanIzin,
   };
 
   // Tambahkan getter agar kompatibel dengan maps_page.dart
-  String get checkIn => jamMasuk ?? '';
-  String? get checkOut => jamKeluar;
+  String get checkIn => checkInTime ?? '';
+  String? get checkOut => checkOutTime;
+
+  // Legacy getters for backward compatibility
+  String? get tanggal => attendanceDate;
+  String? get jamMasuk => checkInTime;
+  String? get jamKeluar => checkOutTime;
+  String? get alamatMasuk => checkInAddress;
+  String? get alamatKeluar => checkOutAddress;
 }

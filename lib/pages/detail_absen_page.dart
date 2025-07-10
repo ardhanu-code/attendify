@@ -3,9 +3,9 @@ import 'package:attendify/models/absen_history_model.dart';
 import 'package:attendify/models/stat_absen_model.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/absen_services.dart';
+import 'package:attendify/widgets/detail_row.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:attendify/widgets/detail_row.dart';
 import 'package:intl/intl.dart';
 
 class DetailAbsenPage extends StatefulWidget {
@@ -24,10 +24,9 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
     setState(() => _isLoading = true);
     try {
       String? token = await Preferences.getToken();
-      List<HistoryAbsenData> historyAbsen =
-          await AbsenServices.fetchAbsenHistory(token ?? '');
+      final response = await AbsenServices.fetchAbsenHistory(token ?? '');
+      listHistoryAbsen = response;
       setState(() {
-        listHistoryAbsen = historyAbsen;
         _isLoading = false;
       });
     } catch (e) {
@@ -71,7 +70,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
         backgroundColor: AppColor.text,
         foregroundColor: AppColor.primary,
         leading: IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, true),
           icon: const Icon(Icons.arrow_back_ios, size: 18),
         ),
         elevation: 0,
@@ -188,11 +187,40 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
     );
   }
 
+  String _formatTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty || timeStr == "null") {
+      return '-- : -- : --';
+    }
+    // Try to parse as HH:mm:ss or HH:mm
+    try {
+      // If already in HH:mm:ss
+      if (RegExp(r'^\d{2}:\d{2}:\d{2}$').hasMatch(timeStr)) {
+        return timeStr;
+      }
+      // If in HH:mm, add :00
+      if (RegExp(r'^\d{2}:\d{2}$').hasMatch(timeStr)) {
+        return '$timeStr:00';
+      }
+      // If in ISO format (e.g. 2024-06-01T08:30:00), extract time
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}').hasMatch(timeStr)) {
+        final dt = DateTime.parse(timeStr);
+        return DateFormat('HH:mm:ss').format(dt);
+      }
+      // Try to parse as DateTime
+      final dt = DateTime.tryParse(timeStr);
+      if (dt != null) {
+        return DateFormat('HH:mm:ss').format(dt);
+      }
+    } catch (_) {}
+    return timeStr;
+  }
+
   Widget _buildAttendanceList() {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColor.primary),
       );
+    }
 
     if (listHistoryAbsen.isEmpty) {
       return Center(
@@ -207,17 +235,34 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
       itemCount: listHistoryAbsen.length,
       itemBuilder: (context, index) {
         final absen = listHistoryAbsen[index];
-        final date = absen.checkIn ?? absen.createdAt;
-        final day = date != null ? DateFormat('EEEE').format(date) : '-';
-        final dateStr = date != null
-            ? DateFormat('dd/MM/yyyy').format(date)
-            : '--/--/----';
-        final checkInTime = absen.checkIn != null
-            ? DateFormat('HH:mm:ss').format(absen.checkIn!)
-            : '-- : -- : --';
-        final checkOutTime = absen.checkOut != null
-            ? DateFormat('HH:mm:ss').format(absen.checkOut!)
-            : '-- : -- : --';
+
+        // Tanggal
+        final date = absen.attendanceDate;
+        final day = DateFormat.EEEE('en_US').format(date);
+        final dateStr = DateFormat('dd/MM/yyyy', 'en_US').format(date);
+
+        // Check In Time
+        String checkInTime = _formatTime(absen.checkInTime);
+
+        // Check Out Time
+        String checkOutTime = _formatTime(absen.checkOutTime);
+
+        // Status
+        Color statusColor;
+        bool isMasuk = absen.status == Status.MASUK;
+        bool isIzin = absen.status == Status.IZIN;
+        bool isLate =
+            false; // Bisa ditambahkan logika untuk late jika diperlukan
+
+        if (isMasuk) {
+          statusColor = Colors.green;
+        } else if (isIzin) {
+          statusColor = Colors.orange;
+        } else if (isLate) {
+          statusColor = Colors.red;
+        } else {
+          statusColor = Colors.grey;
+        }
 
         return GestureDetector(
           onTap: () => _showDetailDialog(absen),
@@ -227,6 +272,13 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
             decoration: BoxDecoration(
               border: Border.all(color: Colors.black12),
               borderRadius: BorderRadius.circular(10),
+              color: isMasuk
+                  ? Colors.green.withOpacity(0.05)
+                  : isIzin
+                  ? Colors.orange.withOpacity(0.05)
+                  : isLate
+                  ? Colors.red.withOpacity(0.05)
+                  : null,
             ),
             child: Row(
               children: [
@@ -243,15 +295,78 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                         ),
                       ),
                       Text(dateStr, style: GoogleFonts.lexend(fontSize: 12)),
+                      if (isMasuk)
+                        Container(
+                          margin: EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'PRESENT',
+                            style: GoogleFonts.lexend(
+                              fontSize: 8,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      if (isIzin)
+                        Container(
+                          margin: EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'PERMISSION',
+                            style: GoogleFonts.lexend(
+                              fontSize: 8,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      if (isLate)
+                        Container(
+                          margin: EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'LATE',
+                            style: GoogleFonts.lexend(
+                              fontSize: 8,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         "Check In",
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
                       ),
                       Text(
                         checkInTime,
@@ -263,9 +378,12 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                 Expanded(
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         "Check Out",
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
                       ),
                       Text(
                         checkOutTime,
@@ -280,11 +398,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                   margin: const EdgeInsets.only(left: 8),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: absen.status == 'masuk'
-                        ? Colors.green
-                        : absen.status == 'izin'
-                        ? Colors.orange
-                        : Colors.red,
+                    color: statusColor,
                   ),
                 ),
               ],
@@ -296,11 +410,9 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
   }
 
   void _showDetailDialog(HistoryAbsenData absen) {
-    String formatTime(DateTime? dateTime) =>
-        dateTime != null ? DateFormat('HH:mm:ss').format(dateTime) : '-';
-    String formatDate(DateTime? dateTime) => dateTime != null
-        ? DateFormat('dd/MM/yyyy HH:mm').format(dateTime)
-        : '-';
+    // Format waktu check in dan check out
+    String checkInTime = _formatTime(absen.checkInTime);
+    String checkOutTime = _formatTime(absen.checkOutTime);
 
     showDialog(
       context: context,
@@ -313,10 +425,10 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
           child: Column(
             children: [
               DetailRow(
-                label: 'User ID:',
-                value: absen.userId?.toString() ?? '-',
+                label: 'Date:',
+                value: DateFormat('dd/MM/yyyy').format(absen.attendanceDate),
               ),
-              DetailRow(label: 'Check In:', value: formatTime(absen.checkIn)),
+              DetailRow(label: 'Check In:', value: checkInTime),
               DetailRow(
                 label: 'Check In Location:',
                 value: absen.checkInLocation ?? '-',
@@ -325,29 +437,28 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                 label: 'Check In Address:',
                 value: absen.checkInAddress ?? '-',
               ),
-              DetailRow(label: 'Check Out:', value: formatTime(absen.checkOut)),
+              DetailRow(label: 'Check Out:', value: checkOutTime),
               DetailRow(
                 label: 'Check Out Location:',
-                value: absen.checkOutLocation ?? '-',
+                value: absen.checkOutLocation?.toString() ?? '-',
               ),
               DetailRow(
                 label: 'Check Out Address:',
-                value: absen.checkOutAddress ?? '-',
+                value: absen.checkOutAddress?.toString() ?? '-',
               ),
-              DetailRow(label: 'Status:', value: absen.status ?? '-'),
               DetailRow(
-                label: 'Alasan Izin:',
-                value: (absen.alasanIzin?.toString().trim().isNotEmpty ?? false)
-                    ? absen.alasanIzin
+                label: 'Status:',
+                value: absen.status == Status.MASUK
+                    ? 'Masuk'
+                    : absen.status == Status.IZIN
+                    ? 'Izin'
                     : '-',
               ),
               DetailRow(
-                label: 'Created At:',
-                value: formatDate(absen.createdAt),
-              ),
-              DetailRow(
-                label: 'Updated At:',
-                value: formatDate(absen.updatedAt),
+                label: 'Alasan Izin:',
+                value: (absen.alasanIzin?.toString().trim().isNotEmpty ?? false)
+                    ? absen.alasanIzin!.toString()
+                    : '-',
               ),
             ],
           ),

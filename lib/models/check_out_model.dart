@@ -11,10 +11,10 @@ String checkOutResponseToJson(CheckOutResponse data) =>
     json.encode(data.toJson());
 
 class CheckOutResponse {
-  String message;
+  String? message;
   CheckOutData data;
 
-  CheckOutResponse({required this.message, required this.data});
+  CheckOutResponse({this.message, required this.data});
 
   factory CheckOutResponse.fromJson(Map<String, dynamic> json) =>
       CheckOutResponse(
@@ -27,76 +27,63 @@ class CheckOutResponse {
 
 class CheckOutData {
   int id;
-  int userId;
-  String checkIn;
-  String checkInLocation;
+  String attendanceDate;
+  String checkInTime;
+  String checkOutTime;
   String checkInAddress;
-  String? checkOut;
-  String? checkOutLocation;
-  String? checkOutAddress;
+  String checkOutAddress;
+  String checkInLocation;
+  String checkOutLocation;
   String status;
   dynamic alasanIzin;
-  String createdAt;
-  String updatedAt;
-  double checkInLat;
-  double checkInLng;
-  double? checkOutLat;
-  double? checkOutLng;
 
   CheckOutData({
     required this.id,
-    required this.userId,
-    required this.checkIn,
-    required this.checkInLocation,
+    required this.attendanceDate,
+    required this.checkInTime,
+    required this.checkOutTime,
     required this.checkInAddress,
-    this.checkOut,
-    this.checkOutLocation,
-    this.checkOutAddress,
+    required this.checkOutAddress,
+    required this.checkInLocation,
+    required this.checkOutLocation,
     required this.status,
     this.alasanIzin,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.checkInLat,
-    required this.checkInLng,
-    this.checkOutLat,
-    this.checkOutLng,
   });
 
   factory CheckOutData.fromJson(Map<String, dynamic> json) => CheckOutData(
     id: json["id"],
-    userId: json["user_id"],
-    checkIn: json["check_in"],
-    checkInLocation: json["check_in_location"],
+    attendanceDate: json["attendance_date"],
+    checkInTime: json["check_in_time"],
+    checkOutTime: json["check_out_time"],
     checkInAddress: json["check_in_address"],
-    checkOut: json["check_out"],
-    checkOutLocation: json["check_out_location"],
     checkOutAddress: json["check_out_address"],
+    checkInLocation: json["check_in_location"],
+    checkOutLocation: json["check_out_location"],
     status: json["status"],
     alasanIzin: json["alasan_izin"],
-    createdAt: json["created_at"],
-    updatedAt: json["updated_at"],
-    checkInLat: json["check_in_lat"]?.toDouble(),
-    checkInLng: json["check_in_lng"]?.toDouble(),
-    checkOutLat: json["check_out_lat"]?.toDouble(),
-    checkOutLng: json["check_out_lng"]?.toDouble(),
   );
 
   Map<String, dynamic> toJson() => {
     "id": id,
-    "user_id": userId,
-    "check_in": checkIn,
-    "check_in_location": checkInLocation,
+    "attendance_date": attendanceDate,
+    "check_in_time": checkInTime,
+    "check_out_time": checkOutTime,
     "check_in_address": checkInAddress,
-    "check_out": checkOut,
-    "check_out_location": checkOutLocation,
     "check_out_address": checkOutAddress,
+    "check_in_location": checkInLocation,
+    "check_out_location": checkOutLocation,
     "status": status,
     "alasan_izin": alasanIzin,
-    "created_at": createdAt,
-    "updated_at": updatedAt,
-    "check_in_lat": checkInLat,
-    "check_in_lng": checkInLng,
-    "check_out_lat": checkOutLat,
-    "check_out_lng": checkOutLng,
   };
+
+  // Legacy getters for backward compatibility
+  String get checkIn => checkInTime;
+  String? get checkOut => checkOutTime;
+  int get userId => 0; // Not provided in new response
+  String get createdAt => ''; // Not provided in new response
+  String get updatedAt => ''; // Not provided in new response
+  double get checkInLat => 0.0; // Not provided in new response
+  double get checkInLng => 0.0; // Not provided in new response
+  double? get checkOutLat => null; // Not provided in new response
+  double? get checkOutLng => null; // Not provided in new response
 }
