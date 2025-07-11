@@ -8,12 +8,14 @@ class HeaderWidget extends StatefulWidget {
   final Future<dynamic> futureProfile;
   final bool hasAttendedToday;
   final VoidCallback showDialogDetailsAttended;
+  final VoidCallback? onRefreshData;
 
   const HeaderWidget({
     Key? key,
     required this.futureProfile,
     required this.hasAttendedToday,
     required this.showDialogDetailsAttended,
+    this.onRefreshData,
   }) : super(key: key);
 
   @override
@@ -188,11 +190,15 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         ),
         Spacer(),
         GestureDetector(
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ProfilePage()),
             );
+            // Refresh data setelah kembali dari profile page
+            if (widget.onRefreshData != null) {
+              widget.onRefreshData!();
+            }
           },
           child: Container(
             height: 32,

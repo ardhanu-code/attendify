@@ -1,5 +1,6 @@
 import 'package:attendify/const/app_color.dart';
 import 'package:attendify/models/today_absen_model.dart';
+import 'package:attendify/pages/izin_page.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/absen_services.dart';
 import 'package:attendify/services/check_in_out_service.dart';
@@ -27,6 +28,7 @@ class _MapsPageState extends State<MapsPage> {
   bool _isCheckingOut = false;
   bool _hasCheckedIn = false;
   TodayAbsenResponse? _todayAbsenResponse;
+  bool _isSubmittingIzin = false;
 
   @override
   void initState() {
@@ -36,7 +38,6 @@ class _MapsPageState extends State<MapsPage> {
     _fetchTodayAttendanceData();
   }
 
-  // Mengecek status check-in hari ini dari backend
   Future<void> _checkTodayCheckInStatus() async {
     try {
       final token = await Preferences.getToken();
@@ -117,7 +118,6 @@ class _MapsPageState extends State<MapsPage> {
       setState(() {
         _todayAbsenResponse = todayAbsenResponse;
       });
-      // Cek status check-in berdasarkan data absen hari ini
       if (todayAbsenResponse.data != null &&
           todayAbsenResponse.data!.checkIn.isNotEmpty) {
         setState(() {
@@ -132,7 +132,6 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   Future<void> _handleCheckIn() async {
-    // Validasi lokasi
     if (_currentPosition == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lokasi belum tersedia. Coba refresh lokasi.')),
@@ -140,7 +139,6 @@ class _MapsPageState extends State<MapsPage> {
       return;
     }
 
-    // Validasi alamat
     if (_currentAddress == null || _currentAddress!.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Alamat belum tersedia. Coba refresh lokasi.')),
@@ -148,7 +146,6 @@ class _MapsPageState extends State<MapsPage> {
       return;
     }
 
-    // Validasi koordinat
     if (_currentPosition!.latitude == 0.0 &&
         _currentPosition!.longitude == 0.0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,12 +166,6 @@ class _MapsPageState extends State<MapsPage> {
         throw Exception('Token tidak ditemukan, silakan login ulang.');
       }
 
-      print('DEBUG: Starting check-in with:');
-      print('  - Latitude: ${_currentPosition!.latitude}');
-      print('  - Longitude: ${_currentPosition!.longitude}');
-      print('  - Address: $_currentAddress');
-      print('  - Status: masuk');
-
       try {
         final response = await CheckInService.checkIn(
           token: token,
@@ -190,7 +181,6 @@ class _MapsPageState extends State<MapsPage> {
         });
         await _fetchTodayAttendanceData();
 
-        // Setelah check in berhasil, pastikan status berubah menjadi sudah check in
         setState(() {
           _hasCheckedIn = true;
         });
@@ -205,7 +195,6 @@ class _MapsPageState extends State<MapsPage> {
         );
         Navigator.pop(context, true);
       } on Exception catch (e) {
-        // Cek jika exception mengandung status 409
         final msg = e.toString();
         if (msg.contains('409')) {
           setState(() {
@@ -218,7 +207,6 @@ class _MapsPageState extends State<MapsPage> {
             ),
           );
         } else {
-          print('DEBUG: Check-in error: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Check In Gagal: ${e.toString()}'),
@@ -265,20 +253,11 @@ class _MapsPageState extends State<MapsPage> {
         throw Exception('Token tidak ditemukan, silakan login ulang.');
       }
 
-      print('DEBUG: Starting check-out with:');
-      print('  - Latitude: ${_currentPosition!.latitude}');
-      print('  - Longitude: ${_currentPosition!.longitude}');
-      print('  - Address: $_currentAddress');
-
       final response = await AbsenServices.checkOut(
         token: token,
         lat: _currentPosition!.latitude,
         lng: _currentPosition!.longitude,
         address: _currentAddress!,
-      );
-
-      print(
-        'DEBUG: Check-out time from response: ${response.data.checkOutTime}',
       );
 
       setState(() {
@@ -309,7 +288,6 @@ class _MapsPageState extends State<MapsPage> {
         ),
       );
     } catch (e) {
-      print('DEBUG: Check-out error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -337,14 +315,31 @@ class _MapsPageState extends State<MapsPage> {
     }
   }
 
+  Future<void> _handleIzin() async {
+    Navigator.pop(context);
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const IzinPage()),
+    );
+
+    if (result == true && mounted) {
+      await _fetchTodayAttendanceData();
+      Navigator.pop(context, true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Cek status check-in berdasarkan data absen hari ini
     bool isCheckedIn = _hasCheckedIn;
-    if (_todayAbsenResponse != null &&
-        _todayAbsenResponse!.data != null &&
-        _todayAbsenResponse!.data!.checkIn.isNotEmpty) {
-      isCheckedIn = true;
+    bool isIzin = false;
+    if (_todayAbsenResponse != null && _todayAbsenResponse!.data != null) {
+      final data = _todayAbsenResponse!.data!;
+      if (data.status != null && data.status!.toLowerCase() == 'izin') {
+        isIzin = true;
+        isCheckedIn = false;
+      } else if (data.checkIn.isNotEmpty) {
+        isCheckedIn = true;
+      }
     }
 
     return Scaffold(
@@ -372,7 +367,6 @@ class _MapsPageState extends State<MapsPage> {
             padding: const EdgeInsets.all(18.0),
             child: Column(
               children: [
-                // Map Section
                 Container(
                   height: 400,
                   width: double.infinity,
@@ -382,7 +376,6 @@ class _MapsPageState extends State<MapsPage> {
                   ),
                   child: Stack(
                     children: [
-                      // Map content
                       _loading
                           ? Center(
                               child: Column(
@@ -482,7 +475,6 @@ class _MapsPageState extends State<MapsPage> {
                                 ),
                               },
                             ),
-                      // Refresh button overlay
                       Positioned(
                         top: 8,
                         right: 8,
@@ -497,7 +489,6 @@ class _MapsPageState extends State<MapsPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                // Status & Address
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -512,11 +503,17 @@ class _MapsPageState extends State<MapsPage> {
                           ),
                         ),
                         Text(
-                          isCheckedIn ? 'Sudah Check In' : 'Belum Check In',
+                          isIzin
+                              ? 'Izin'
+                              : (isCheckedIn
+                                    ? 'Sudah Check In'
+                                    : 'Belum Check In'),
                           style: GoogleFonts.lexend(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isCheckedIn ? Colors.green : Colors.red,
+                            color: isIzin
+                                ? Colors.orange
+                                : (isCheckedIn ? Colors.green : Colors.red),
                           ),
                         ),
                       ],
@@ -548,7 +545,6 @@ class _MapsPageState extends State<MapsPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                // Attendance Time Card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -609,23 +605,31 @@ class _MapsPageState extends State<MapsPage> {
                               : null;
 
                           if (todayData != null) {
-                            if (todayData.checkIn.isNotEmpty) {
-                              try {
-                                final dt = DateTime.parse(todayData.checkIn);
-                                checkInTime =
-                                    "${dt.hour.toString().padLeft(2, '0')} : ${dt.minute.toString().padLeft(2, '0')} : ${dt.second.toString().padLeft(2, '0')}";
-                              } catch (_) {
-                                checkInTime = todayData.checkIn;
+                            if (todayData.status != null &&
+                                todayData.status!.toLowerCase() == 'izin') {
+                              checkInTime = 'Izin';
+                              checkOutTime = '-';
+                            } else {
+                              if (todayData.checkIn.isNotEmpty) {
+                                try {
+                                  final dt = DateTime.parse(todayData.checkIn);
+                                  checkInTime =
+                                      "${dt.hour.toString().padLeft(2, '0')} : ${dt.minute.toString().padLeft(2, '0')} : ${dt.second.toString().padLeft(2, '0')}";
+                                } catch (_) {
+                                  checkInTime = todayData.checkIn;
+                                }
                               }
-                            }
-                            if (todayData.checkOut != null &&
-                                todayData.checkOut!.isNotEmpty) {
-                              try {
-                                final dt = DateTime.parse(todayData.checkOut!);
-                                checkOutTime =
-                                    "${dt.hour.toString().padLeft(2, '0')} : ${dt.minute.toString().padLeft(2, '0')} : ${dt.second.toString().padLeft(2, '0')}";
-                              } catch (_) {
-                                checkOutTime = todayData.checkOut!;
+                              if (todayData.checkOut != null &&
+                                  todayData.checkOut!.isNotEmpty) {
+                                try {
+                                  final dt = DateTime.parse(
+                                    todayData.checkOut!,
+                                  );
+                                  checkOutTime =
+                                      "${dt.hour.toString().padLeft(2, '0')} : ${dt.minute.toString().padLeft(2, '0')} : ${dt.second.toString().padLeft(2, '0')}";
+                                } catch (_) {
+                                  checkOutTime = todayData.checkOut!;
+                                }
                               }
                             }
                           }
@@ -672,7 +676,9 @@ class _MapsPageState extends State<MapsPage> {
                                       style: GoogleFonts.lexend(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.black,
+                                        color: checkInTime == 'Izin'
+                                            ? Colors.orange
+                                            : Colors.black,
                                       ),
                                     ),
                                   ],
@@ -711,30 +717,51 @@ class _MapsPageState extends State<MapsPage> {
                   ),
                 ),
                 SizedBox(height: 16),
-                CustomButton(
-                  onPressed: _isCheckingIn || _isCheckingOut
-                      ? null
-                      : (isCheckedIn ? _handleCheckOut : _handleCheckIn),
-                  text: _isCheckingIn
-                      ? ''
-                      : (_isCheckingOut
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomButton(
+                        onPressed: _isCheckingIn || _isCheckingOut || isIzin
+                            ? null
+                            : (isCheckedIn ? _handleCheckOut : _handleCheckIn),
+                        text: _isCheckingIn
                             ? ''
-                            : (isCheckedIn ? 'Check Out' : 'Check In')),
-                  minWidth: double.infinity,
-                  height: 45,
-                  backgroundColor: AppColor.primary,
-                  foregroundColor: AppColor.text,
-                  borderRadius: BorderRadius.circular(10),
-                  icon: _isCheckingIn || _isCheckingOut
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: AppColor.text,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : null,
+                            : (_isCheckingOut
+                                  ? ''
+                                  : (isCheckedIn ? 'Check Out' : 'Check In')),
+                        minWidth: double.infinity,
+                        height: 45,
+                        backgroundColor: AppColor.primary,
+                        foregroundColor: AppColor.text,
+                        borderRadius: BorderRadius.circular(10),
+                        icon: _isCheckingIn || _isCheckingOut
+                            ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: AppColor.text,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        onPressed: isIzin ? null : _handleIzin,
+                        text: isIzin ? 'Sudah Izin' : 'Ajukan Izin',
+                        minWidth: double.infinity,
+                        height: 45,
+                        backgroundColor: isIzin ? Colors.grey : Colors.orange,
+                        foregroundColor: AppColor.text,
+                        borderRadius: BorderRadius.circular(10),
+                        icon: isIzin
+                            ? Icon(Icons.check_circle, size: 20)
+                            : null,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -160,28 +160,21 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
           'Attendance Records',
           style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.w700),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColor.tertiary,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: TextButton.icon(
-            icon: Icon(Icons.filter_list, size: 16, color: AppColor.primary),
-            label: Text(
-              'Filter',
-              style: GoogleFonts.lexend(
-                fontSize: 12,
-                color: AppColor.primary,
-                fontWeight: FontWeight.w500,
-              ),
+        TextButton.icon(
+          icon: Icon(Icons.filter_list, size: 16, color: AppColor.primary),
+          label: Text(
+            'Filter',
+            style: GoogleFonts.lexend(
+              fontSize: 12,
+              color: AppColor.primary,
+              fontWeight: FontWeight.w500,
             ),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () {},
           ),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: () {},
         ),
       ],
     );

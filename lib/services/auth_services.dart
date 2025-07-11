@@ -58,20 +58,87 @@ Future<User> registerUser(
   }
 }
 
-/// Login a user, save the token, and return the [UserLogin] model from login_model.dart
-Future<UserLogin> loginUser(String email, String password, String token) async {
+/// Login a user without requiring a token (for initial login)
+Future<UserLogin> loginUserWithoutToken(String email, String password) async {
+  final url = Uri.parse(Endpoint.login);
+  final headers = getHeader();
+  final body = {'email': email, 'password': password};
+
+  print('DEBUG: Login without token URL: $url');
+  print('DEBUG: Login without token headers: $headers');
+  print('DEBUG: Login without token body: ${jsonEncode(body)}');
+
   final response = await http.post(
-    Uri.parse(Endpoint.login),
-    headers: getHeadersLogin(token),
-    body: jsonEncode({'email': email, 'password': password}),
+    url,
+    headers: headers,
+    body: jsonEncode(body),
   );
 
-  if (response.statusCode == 200) {
-    final loginResponse = LoginResponse.fromJson(json.decode(response.body));
-    // Save token to preferences
-    await Preferences.saveToken(loginResponse.data.token);
-    return loginResponse.data.user;
+  print('DEBUG: Login without token response status: ${response.statusCode}');
+  print('DEBUG: Login without token response body: ${response.body}');
+
+  if (response.statusCode == 200 || response.statusCode == 201) {
+    try {
+      final loginResponse = LoginResponse.fromJson(json.decode(response.body));
+      // Save token to preferences
+      await Preferences.saveToken(loginResponse.data.token);
+      return loginResponse.data.user;
+    } catch (e) {
+      print('DEBUG: Error parsing login response: $e');
+      throw Exception('Error parsing login response: $e');
+    }
   } else {
-    throw Exception('Failed to login user.');
+    String message = 'Failed to login user';
+    try {
+      final errorData = json.decode(response.body);
+      if (errorData is Map && errorData['message'] != null) {
+        message = errorData['message'];
+      }
+    } catch (_) {}
+    throw Exception('$message (Status: ${response.statusCode})');
+  }
+}
+
+/// Login a user, save the token, and return the [UserLogin] model from login_model.dart
+Future<UserLogin> loginUser(String email, String password, String token) async {
+  final url = Uri.parse(Endpoint.login);
+
+  // Use different headers based on whether token is provided
+  final headers = token.isNotEmpty ? getHeadersLogin(token) : getHeader();
+  final body = {'email': email, 'password': password};
+
+  print('DEBUG: Login URL: $url');
+  print('DEBUG: Login headers: $headers');
+  print('DEBUG: Login body: ${jsonEncode(body)}');
+  print('DEBUG: Token provided: ${token.isNotEmpty ? "Yes" : "No"}');
+
+  final response = await http.post(
+    url,
+    headers: headers,
+    body: jsonEncode(body),
+  );
+
+  print('DEBUG: Login response status: ${response.statusCode}');
+  print('DEBUG: Login response body: ${response.body}');
+
+  if (response.statusCode == 200 || response.statusCode == 201) {
+    try {
+      final loginResponse = LoginResponse.fromJson(json.decode(response.body));
+      // Save token to preferences
+      await Preferences.saveToken(loginResponse.data.token);
+      return loginResponse.data.user;
+    } catch (e) {
+      print('DEBUG: Error parsing login response: $e');
+      throw Exception('Error parsing login response: $e');
+    }
+  } else {
+    String message = 'Failed to login user';
+    try {
+      final errorData = json.decode(response.body);
+      if (errorData is Map && errorData['message'] != null) {
+        message = errorData['message'];
+      }
+    } catch (_) {}
+    throw Exception('$message (Status: ${response.statusCode})');
   }
 }

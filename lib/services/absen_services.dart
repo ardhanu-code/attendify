@@ -2,6 +2,7 @@ import 'dart:convert'; // Added for jsonEncode and jsonDecode
 
 import 'package:attendify/endpoint/endpoint.dart';
 import 'package:attendify/models/check_out_model.dart';
+import 'package:attendify/models/izin_model.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/absen_history_model.dart';
@@ -137,6 +138,54 @@ class AbsenServices {
       }
     } else {
       String message = 'Gagal check out';
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['message'] != null) {
+          message = data['message'];
+        }
+      } catch (_) {}
+      throw Exception('$message (Status: ${response.statusCode})');
+    }
+  }
+
+  /// Submit izin (permission) request
+  static Future<IzinResponse> submitIzin({
+    required String token,
+    required String date,
+    required String alasanIzin,
+  }) async {
+    final url = Uri.parse(Endpoint.permission);
+    final headers = _buildHeaders(token);
+
+    final body = <String, dynamic>{'date': date, 'alasan_izin': alasanIzin};
+
+    print('DEBUG: Izin request body: ${jsonEncode(body)}');
+    print('DEBUG: Izin URL: $url');
+    print('DEBUG: Izin headers: $headers');
+
+    final response = await http.post(
+      url,
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    print('DEBUG: Izin response status: ${response.statusCode}');
+    print('DEBUG: Izin response body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      try {
+        final izinResponse = izinResponseFromJson(response.body);
+        print('DEBUG: Parsed izin response successfully');
+        print('DEBUG: Message: ${izinResponse.message}');
+        print('DEBUG: Data ID: ${izinResponse.data.id}');
+        print('DEBUG: Status: ${izinResponse.data.status}');
+        return izinResponse;
+      } catch (e) {
+        print('DEBUG: Error parsing izin response: $e');
+        throw Exception('Error parsing response: $e');
+      }
+    } else {
+      String message = 'Gagal mengajukan izin';
       try {
         final data = jsonDecode(response.body);
         if (data is Map && data['message'] != null) {
