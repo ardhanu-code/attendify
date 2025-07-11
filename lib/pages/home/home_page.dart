@@ -11,12 +11,14 @@ import 'package:attendify/pages/home/widgets/section_riwayat_details_widget.dart
 import 'package:attendify/pages/maps_page.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/absen_services.dart';
+import 'package:attendify/services/device_token_services.dart';
 import 'package:attendify/services/maps_services.dart';
 import 'package:attendify/services/profile_services.dart';
 import 'package:attendify/widgets/button.dart';
 import 'package:attendify/widgets/detail_row.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -51,11 +53,30 @@ class _HomePageState extends State<HomePage>
     return ProfileServices.fetchProfile(token);
   }
 
+  String? onesignalPlayerId;
+
+  void setupOneSIgnal() async {
+    await OneSignal.Notifications.requestPermission(true);
+    final deviceState = await OneSignal.User.getOnesignalId();
+    onesignalPlayerId = deviceState;
+    print("One Signal Player ID: $onesignalPlayerId");
+    //tambahkan hit endpoint device token untuk send token
+    // Panggil sendDeviceToken dari device_token_services.dart jika onesignalPlayerId tidak null
+    if (onesignalPlayerId != null && onesignalPlayerId!.isNotEmpty) {
+      try {
+        await sendDeviceToken(onesignalPlayerId!);
+      } catch (e) {
+        print("Failed to send device token: $e");
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshData();
+    setupOneSIgnal();
   }
 
   @override

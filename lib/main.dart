@@ -1,9 +1,13 @@
-import 'package:attendify/pages/auth/login_page.dart';
-import 'package:attendify/pages/auth/register_page.dart';
-import 'package:flutter/material.dart';
 import 'package:attendify/pages/splash_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 void main() {
+  final String appId = '9955bcc4-5061-4e60-b304-dbaca583d39f';
+  WidgetsFlutterBinding.ensureInitialized();
+
+  OneSignal.initialize(appId);
+  OneSignal.Notifications.requestPermission(true);
   runApp(const MyApp());
 }
 

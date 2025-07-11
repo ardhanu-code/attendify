@@ -13,6 +13,7 @@ class Endpoint {
   static final String permission = '$baseUrl/izin';
   static final String resetPassword = '$baseUrl/reset-password';
   static final String forgotPassword = '$baseUrl/forgot-password';
+  static String deleteAbsen(int id) => '$baseUrl/absen/$id';
   static String todayAbsen(String attendanceDate) =>
       '$baseUrl/absen/today?attendance_date=$attendanceDate';
 }

@@ -20,6 +20,13 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
   StatDataAbsen? statAbsen;
   bool _isLoading = true;
 
+  // Date filter state
+  DateTime? _filterStartDate;
+  DateTime? _filterEndDate;
+
+  // Month selector state
+  int _selectedMonth = DateTime.now().month;
+
   Future<void> _getHistoryAbsen() async {
     setState(() => _isLoading = true);
     try {
@@ -53,8 +60,177 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
   @override
   void initState() {
     super.initState();
-    _getHistoryAbsen();
+    final now = DateTime.now();
+    _selectedMonth = now.month;
+    _filterStartDate = DateTime(now.year, now.month, 1);
+    _filterEndDate = DateTime(now.year, now.month + 1, 0);
+    _fetchFilteredHistory();
     _getStatAbsen();
+  }
+
+  Future<void> _fetchFilteredHistory() async {
+    setState(() => _isLoading = true);
+    try {
+      String? token = await Preferences.getToken();
+      if (token == null || token.isEmpty) {
+        setState(() {
+          listHistoryAbsen = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Jika filterStartDate dan filterEndDate null, artinya "Semua" (tanpa filter)
+      if (_filterStartDate == null && _filterEndDate == null) {
+        // Ambil semua data
+        final response = await AbsenServices.fetchAbsenHistory(token);
+        setState(() {
+          listHistoryAbsen = response;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final records = await AbsenServices.fetchAttendanceRecords(
+        token: token,
+        startDate: _filterStartDate!,
+        endDate: _filterEndDate!,
+      );
+      // Convert TodayAbsenData to HistoryAbsenData-like for display (minimal fields)
+      setState(() {
+        listHistoryAbsen = records
+            .map(
+              (e) => HistoryAbsenData(
+                id: 0,
+                attendanceDate: DateTime.parse(e.attendanceDate ?? ''),
+                checkInTime: e.checkInTime,
+                checkOutTime: e.checkOutTime,
+                checkInLat: null,
+                checkInLng: null,
+                checkOutLat: null,
+                checkOutLng: null,
+                checkInAddress: e.checkInAddress,
+                checkOutAddress: e.checkOutAddress,
+                checkInLocation: null,
+                checkOutLocation: null,
+                status: (e.status?.toLowerCase() == 'izin')
+                    ? Status.IZIN
+                    : Status.MASUK,
+                alasanIzin: e.alasanIzin,
+              ),
+            )
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        listHistoryAbsen = [];
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _selectFilterDate(BuildContext context, bool isStart) async {
+    final initialDate = isStart
+        ? (_filterStartDate ?? DateTime.now())
+        : (_filterEndDate ?? DateTime.now());
+    final firstDate = DateTime(DateTime.now().year - 2, 1, 1);
+    final lastDate = DateTime(DateTime.now().year + 1, 12, 31);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _filterStartDate = picked;
+          if (_filterEndDate != null && _filterEndDate!.isBefore(picked)) {
+            _filterEndDate = picked;
+          }
+        } else {
+          _filterEndDate = picked;
+          if (_filterStartDate != null && _filterStartDate!.isAfter(picked)) {
+            _filterStartDate = picked;
+          }
+        }
+      });
+      _fetchFilteredHistory();
+    }
+  }
+
+  Widget _buildMonthSelector() {
+    final months = [
+      'Semua', // Default option to show all data
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    return SizedBox(
+      height: 34,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: months.length,
+        itemBuilder: (context, idx) {
+          final isSelected =
+              (_selectedMonth == 0 && idx == 0) || (_selectedMonth == idx);
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                if (idx == 0) {
+                  // Jika memilih "Semua", tampilkan semua data (tanpa filter)
+                  _selectedMonth = 0;
+                  _filterStartDate = null;
+                  _filterEndDate = null;
+                  _fetchFilteredHistory();
+                } else {
+                  _selectedMonth = idx;
+                  final now = DateTime.now();
+                  _filterStartDate = DateTime(now.year, _selectedMonth, 1);
+                  _filterEndDate = DateTime(now.year, _selectedMonth + 1, 0);
+                  _fetchFilteredHistory();
+                }
+              });
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+              height: 34,
+              decoration: BoxDecoration(
+                color: isSelected ? AppColor.primary : Colors.grey[200],
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isSelected ? AppColor.primary : Colors.grey[400]!,
+                  width: 1.2,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  months[idx],
+                  style: GoogleFonts.lexend(
+                    color: isSelected ? AppColor.text : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w400,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -83,6 +259,8 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
               _buildSummaryCard(),
               const SizedBox(height: 16),
               _buildFilterSection(),
+              SizedBox(height: 18),
+              _buildMonthSelector(),
               const SizedBox(height: 8),
               Expanded(
                 child: RefreshIndicator(
@@ -153,28 +331,75 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
   }
 
   Widget _buildFilterSection() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Attendance Records',
-          style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.w700),
+          'Filter Data Kehadiran',
+          style: GoogleFonts.lexend(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColor.primary,
+          ),
         ),
-        TextButton.icon(
-          icon: Icon(Icons.filter_list, size: 16, color: AppColor.primary),
-          label: Text(
-            'Filter',
-            style: GoogleFonts.lexend(
-              fontSize: 12,
-              color: AppColor.primary,
-              fontWeight: FontWeight.w500,
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectFilterDate(context, true),
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.date_range, size: 18, color: AppColor.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        _filterStartDate != null
+                            ? " ${_filterStartDate!.day.toString().padLeft(2, '0')}-${_filterStartDate!.month.toString().padLeft(2, '0')}-${_filterStartDate!.year}"
+                            : "-",
+                        style: GoogleFonts.lexend(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: () {},
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text("s/d", style: GoogleFonts.lexend(fontSize: 13)),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectFilterDate(context, false),
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.date_range, size: 18, color: AppColor.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        _filterEndDate != null
+                            ? "${_filterEndDate!.day.toString().padLeft(2, '0')}-${_filterEndDate!.month.toString().padLeft(2, '0')}-${_filterEndDate!.year}"
+                            : "-",
+                        style: GoogleFonts.lexend(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -259,6 +484,64 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
 
         return GestureDetector(
           onTap: () => _showDetailDialog(absen),
+          onLongPress: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(
+                  'Delete Attendance',
+                  style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+                ),
+                content: Text(
+                  'Are you sure you want to delete this attendance record?',
+                  style: GoogleFonts.lexend(),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: Text('Cancel', style: GoogleFonts.lexend()),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: Text(
+                      'Delete',
+                      style: GoogleFonts.lexend(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              try {
+                String? token = await Preferences.getToken();
+                await AbsenServices.deleteAbsen(token ?? '', absen.id);
+                setState(() {
+                  listHistoryAbsen.removeAt(index);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Attendance deleted successfully.',
+                      style: GoogleFonts.lexend(),
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                // Optionally refresh stat
+                await _getStatAbsen();
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Failed to delete attendance: $e',
+                      style: GoogleFonts.lexend(),
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 6),
             padding: const EdgeInsets.all(16),
@@ -274,6 +557,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                   : null,
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   flex: 2,
@@ -388,12 +672,13 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                 Container(
                   width: 8,
                   height: 8,
-                  margin: const EdgeInsets.only(left: 8),
+                  margin: const EdgeInsets.only(left: 8, right: 8),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: statusColor,
                   ),
                 ),
+                // SizedBox(width: 4), // Tidak perlu tombol delete lagi
               ],
             ),
           ),
@@ -424,7 +709,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
               DetailRow(label: 'Check In:', value: checkInTime),
               DetailRow(
                 label: 'Check In Location:',
-                value: absen.checkInLocation ?? '-',
+                value: '${absen.checkInLat}, ${absen.checkInLng}',
               ),
               DetailRow(
                 label: 'Check In Address:',
@@ -433,7 +718,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
               DetailRow(label: 'Check Out:', value: checkOutTime),
               DetailRow(
                 label: 'Check Out Location:',
-                value: absen.checkOutLocation?.toString() ?? '-',
+                value: '${absen.checkInLat}, ${absen.checkInLng}',
               ),
               DetailRow(
                 label: 'Check Out Address:',

@@ -82,6 +82,45 @@ class AbsenServices {
     }
   }
 
+  /// Fetch attendance records for a date range (for maps_page.dart filter)
+  static Future<List<TodayAbsenData>> fetchAttendanceRecords({
+    required String token,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final String start =
+        "${startDate.year.toString().padLeft(4, '0')}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
+    final String end =
+        "${endDate.year.toString().padLeft(4, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
+    final url = Uri.parse("${Endpoint.allHistoryAbsen}?start=$start&end=$end");
+    final response = await http.get(url, headers: _buildHeaders(token));
+    if (response.statusCode == 200) {
+      final historyResponse = historyAbsenResponseFromJson(response.body);
+      // Convert HistoryAbsenData to TodayAbsenData for compatibility
+      return historyResponse.data
+          .map(
+            (history) => TodayAbsenData(
+              attendanceDate: history.attendanceDate.toIso8601String().split(
+                'T',
+              )[0],
+              checkInTime: history.checkInTime,
+              checkOutTime: history.checkOutTime is String
+                  ? history.checkOutTime
+                  : (history.checkOutTime?.toString()),
+              checkInAddress: history.checkInAddress,
+              checkOutAddress: history.checkOutAddress?.toString(),
+              status: history.status == Status.IZIN ? 'izin' : 'masuk',
+              alasanIzin: history.alasanIzin,
+            ),
+          )
+          .toList();
+    } else {
+      throw Exception(
+        'Failed to load attendance records: ${response.statusCode}',
+      );
+    }
+  }
+
   static Future<CheckOutResponse> checkOut({
     required String token,
     required double lat,
@@ -193,6 +232,17 @@ class AbsenServices {
         }
       } catch (_) {}
       throw Exception('$message (Status: ${response.statusCode})');
+    }
+  }
+
+  /// Delete an attendance record by ID
+  static Future<void> deleteAbsen(String token, int absenId) async {
+    final url = Uri.parse(Endpoint.deleteAbsen(absenId));
+    final response = await http.delete(url, headers: _buildHeaders(token));
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception(
+        'Failed to delete attendance: \nStatus: ${response.statusCode}\nBody: ${response.body}',
+      );
     }
   }
 }
