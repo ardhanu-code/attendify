@@ -91,35 +91,20 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
         return;
       }
 
-      final records = await AbsenServices.fetchAttendanceRecords(
-        token: token,
-        startDate: _filterStartDate!,
-        endDate: _filterEndDate!,
-      );
-      // Convert TodayAbsenData to HistoryAbsenData-like for display (minimal fields)
+      // Ambil semua data history, lalu filter berdasarkan tanggal
+      final allHistoryData = await AbsenServices.fetchAbsenHistory(token);
+
+      // Filter data berdasarkan tanggal yang dipilih
+      final filteredData = allHistoryData.where((absen) {
+        final absenDate = absen.attendanceDate;
+        return absenDate.isAfter(
+              _filterStartDate!.subtract(const Duration(days: 1)),
+            ) &&
+            absenDate.isBefore(_filterEndDate!.add(const Duration(days: 1)));
+      }).toList();
+
       setState(() {
-        listHistoryAbsen = records
-            .map(
-              (e) => HistoryAbsenData(
-                id: 0,
-                attendanceDate: DateTime.parse(e.attendanceDate ?? ''),
-                checkInTime: e.checkInTime,
-                checkOutTime: e.checkOutTime,
-                checkInLat: null,
-                checkInLng: null,
-                checkOutLat: null,
-                checkOutLng: null,
-                checkInAddress: e.checkInAddress,
-                checkOutAddress: e.checkOutAddress,
-                checkInLocation: null,
-                checkOutLocation: null,
-                status: (e.status?.toLowerCase() == 'izin')
-                    ? Status.IZIN
-                    : Status.MASUK,
-                alasanIzin: e.alasanIzin,
-              ),
-            )
-            .toList();
+        listHistoryAbsen = filteredData;
         _isLoading = false;
       });
     } catch (e) {
