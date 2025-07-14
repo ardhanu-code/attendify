@@ -40,13 +40,13 @@ class _ListDataWidgetState extends State<ListDataWidget> {
           return bDate.compareTo(aDate); // descending
         });
 
-        // Only show the first 7 items
-        final limitedData = sortedData.take(7).toList();
+        // Use all sorted data instead of limiting to 7 items
+        final displayData = sortedData;
 
         return ListView.builder(
-          itemCount: limitedData.length,
+          itemCount: displayData.length,
           itemBuilder: (BuildContext context, int index) {
-            final absen = limitedData[index];
+            final absen = displayData[index];
 
             final date = absen.attendanceDate ?? DateTime.now();
             final isWeekend = date.weekday == 6 || date.weekday == 7;

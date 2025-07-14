@@ -55,13 +55,11 @@ class _HomePageState extends State<HomePage>
 
   String? onesignalPlayerId;
 
-  void setupOneSIgnal() async {
+  void setupOneSignal() async {
     await OneSignal.Notifications.requestPermission(true);
     final deviceState = await OneSignal.User.getOnesignalId();
     onesignalPlayerId = deviceState;
     print("One Signal Player ID: $onesignalPlayerId");
-    //tambahkan hit endpoint device token untuk send token
-    // Panggil sendDeviceToken dari device_token_services.dart jika onesignalPlayerId tidak null
     if (onesignalPlayerId != null && onesignalPlayerId!.isNotEmpty) {
       try {
         await sendDeviceToken(onesignalPlayerId!);
@@ -76,7 +74,7 @@ class _HomePageState extends State<HomePage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshData();
-    setupOneSIgnal();
+    setupOneSignal();
   }
 
   @override
@@ -399,7 +397,6 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<dynamic> _showDialogDetailsAttended() {
-    // Dialog check out dihapus, hanya tampilkan data attendance hari ini
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -438,7 +435,6 @@ class _HomePageState extends State<HomePage>
                   label: 'Status:',
                   value: _todayAbsenResponse!.data!.status ?? '-',
                 ),
-                // Permission Reason removed
               ] else ...[
                 DetailRow(
                   label: 'Status:',
