@@ -145,7 +145,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(color: AppColor.primary),
+                        ),
                       ),
                       ElevatedButton(
                         onPressed: () async {

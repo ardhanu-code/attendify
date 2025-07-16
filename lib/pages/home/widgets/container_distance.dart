@@ -33,6 +33,7 @@ class _ContainerDistanceAndOpenMapWidgetState
           children: [
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Distance from place',
@@ -59,15 +60,62 @@ class _ContainerDistanceAndOpenMapWidgetState
               ),
               builder: (context, snapshot) {
                 final now = snapshot.data ?? DateTime.now();
-                final timeString =
-                    '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-                return Text(
-                  timeString,
-                  style: GoogleFonts.lexend(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColor.primary,
-                  ),
+
+                // Manual formatting for Indonesian date: Rabu, 15 Juli 2025
+                const hari = [
+                  'Minggu',
+                  'Senin',
+                  'Selasa',
+                  'Rabu',
+                  'Kamis',
+                  'Jumat',
+                  'Sabtu',
+                ];
+                const bulan = [
+                  '',
+                  'Januari',
+                  'Februari',
+                  'Maret',
+                  'April',
+                  'Mei',
+                  'Juni',
+                  'Juli',
+                  'Agustus',
+                  'September',
+                  'Oktober',
+                  'November',
+                  'Desember',
+                ];
+
+                String pad(int n) => n.toString().padLeft(2, '0');
+                String hariString = hari[now.weekday % 7];
+                String bulanString = bulan[now.month];
+                String dateString =
+                    '$hariString, ${now.day} $bulanString ${now.year}';
+                String timeString =
+                    '${pad(now.hour)}:${pad(now.minute)}:${pad(now.second)}';
+
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      dateString,
+                      style: GoogleFonts.lexend(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColor.secondary,
+                      ),
+                    ),
+                    Text(
+                      timeString,
+                      style: GoogleFonts.lexend(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColor.primary,
+                      ),
+                    ),
+                  ],
                 );
               },
             ),

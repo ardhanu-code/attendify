@@ -455,7 +455,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
         bool isMasuk = absen.status == Status.MASUK;
         bool isIzin = absen.status == Status.IZIN;
         bool isLate =
-            false; // Bisa ditambahkan logika untuk late jika diperlukan
+            false;
 
         if (isMasuk) {
           statusColor = Colors.green;
