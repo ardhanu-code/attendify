@@ -274,6 +274,7 @@ class _HomePageState extends State<HomePage>
                 },
               ),
               Expanded(
+                flex: 15,
                 child: RefreshIndicator(
                   onRefresh: _refreshData,
                   color: AppColor.primary,

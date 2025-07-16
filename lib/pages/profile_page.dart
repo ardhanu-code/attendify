@@ -6,6 +6,7 @@ import 'package:attendify/models/profile_model.dart';
 import 'package:attendify/pages/splash_screen.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/profile_services.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -385,6 +386,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         tileColor: Colors.red.withOpacity(0.05),
                       ),
+                      // Tambahkan copyright di bawah konten utama
+                      const SizedBox(height: 24),
+                      CopyrightText(),
                     ],
                   ),
                 );

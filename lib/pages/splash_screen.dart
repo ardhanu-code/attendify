@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:attendify/pages/home/home_page.dart';
 import 'package:attendify/pages/auth/login_page.dart';
+import 'package:attendify/pages/home/home_page.dart';
 import 'package:attendify/preferences/preferences.dart';
+import 'package:attendify/widgets/copy_right.dart';
+import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -39,10 +40,17 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Image.asset(
-          'assets/logo/attendify_black.png',
-          width: 180,
-          height: 180,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/logo/attendify_black.png',
+              width: 180,
+              height: 180,
+            ),
+            const SizedBox(height: 24),
+            CopyrightText(),
+          ],
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:attendify/const/app_color.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/absen_services.dart';
 import 'package:attendify/widgets/button.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -346,6 +347,9 @@ class _IzinPageState extends State<IzinPage> {
                         )
                       : Icon(Icons.send, size: 20),
                 ),
+                // Tambahkan copyright di bawah konten utama
+                const SizedBox(height: 24),
+                CopyrightText(),
               ],
             ),
           ),

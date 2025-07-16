@@ -4,6 +4,7 @@ import 'package:attendify/const/app_color.dart';
 import 'package:attendify/pages/auth/reset_password_page.dart';
 import 'package:attendify/services/forgot_password_services.dart';
 import 'package:attendify/widgets/button.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -273,6 +274,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       ),
                     ),
                   ),
+                  // Tambahkan copyright di bawah konten utama
+                  const SizedBox(height: 24),
+                  CopyrightText(),
                 ],
               ),
             ),

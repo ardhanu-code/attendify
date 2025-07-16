@@ -8,6 +8,7 @@ import 'package:attendify/services/absen_services.dart';
 import 'package:attendify/services/check_in_out_service.dart';
 import 'package:attendify/services/maps_services.dart';
 import 'package:attendify/widgets/button.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -765,6 +766,9 @@ class _MapsPageState extends State<MapsPage> {
                     ),
                   ],
                 ),
+                // Tambahkan copyright di bawah konten utama
+                const SizedBox(height: 24),
+                CopyrightText(),
               ],
             ),
           ),

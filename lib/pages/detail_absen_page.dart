@@ -3,6 +3,7 @@ import 'package:attendify/models/absen_history_model.dart';
 import 'package:attendify/models/stat_absen_model.dart';
 import 'package:attendify/preferences/preferences.dart';
 import 'package:attendify/services/absen_services.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:attendify/widgets/detail_row.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -257,6 +258,9 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
                   child: _buildAttendanceList(),
                 ),
               ),
+              // Tambahkan copyright di bawah konten utama
+              const SizedBox(height: 24),
+              CopyrightText(),
             ],
           ),
         ),
@@ -454,8 +458,7 @@ class _DetailAbsenPageState extends State<DetailAbsenPage> {
         Color statusColor;
         bool isMasuk = absen.status == Status.MASUK;
         bool isIzin = absen.status == Status.IZIN;
-        bool isLate =
-            false;
+        bool isLate = false;
 
         if (isMasuk) {
           statusColor = Colors.green;

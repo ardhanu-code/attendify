@@ -6,6 +6,7 @@ import 'package:attendify/services/auth_services.dart';
 import 'package:attendify/services/get_batches_services.dart';
 import 'package:attendify/services/get_trainings_services.dart';
 import 'package:attendify/widgets/button.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -250,6 +251,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   backgroundColor: AppColor.primary,
                   height: 54,
                 ),
+                // Tambahkan copyright di bawah konten utama
+                const SizedBox(height: 24),
+                CopyrightText(),
               ],
             ),
           ),
