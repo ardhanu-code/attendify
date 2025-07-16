@@ -15,6 +15,7 @@ import 'package:attendify/services/device_token_services.dart';
 import 'package:attendify/services/maps_services.dart';
 import 'package:attendify/services/profile_services.dart';
 import 'package:attendify/widgets/button.dart';
+import 'package:attendify/widgets/copy_right.dart';
 import 'package:attendify/widgets/detail_row.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -281,6 +282,8 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              CopyrightText(),
             ],
           ),
         ),
